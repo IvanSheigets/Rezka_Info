@@ -580,16 +580,16 @@ namespace RezkaInfo
 
                     if (iTypeFunc==2)
                         strMSSQLQuery = "select COUNT(vh.id) , ROUND(sum(vh.brytto-vh.vagatary),3), ROUND(sum(vh.brytto),3), SUM(vh.koletiketki),SUM(vh.dlinarylona) " +
-                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                    "where s.rylon_id=vh.id and s.rylon_state=1 and vh.product_id=" + lsZakazchik[i].iProductId + " "+ strYear;
+                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z  " +
+                                    "where s.rylon_id=vh.id and s.rylon_state=1 and vh.zakaz_id=z.id and vh.product_id=" + lsZakazchik[i].iProductId + " and z.partiya='" + lsZakazchik[i].strPartiya + "' " + strYear;
                     else if (iTypeFunc==1)
                         strMSSQLQuery = "select COUNT(vh.id) , ROUND(sum(vh.brytto-vh.vagatary),3), ROUND(sum(vh.brytto),3), SUM(vh.koletiketki),SUM(vh.dlinarylona) " +
-                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                    "where s.rylon_id=vh.id and s.rylon_state=2 and vh.product_id=" + lsZakazchik[i].iProductId + " " + strYear;
+                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z " +
+                                    "where s.rylon_id=vh.id and s.rylon_state=2 and vh.zakaz_id=z.id and vh.product_id=" + lsZakazchik[i].iProductId + " and z.partiya='" + lsZakazchik[i].strPartiya+ "' " + strYear;
                     else
                         strMSSQLQuery = "select COUNT(vh.id) , ROUND(sum(vh.brytto-vh.vagatary),3), ROUND(sum(vh.brytto),3), SUM(vh.koletiketki),SUM(vh.dlinarylona) " +
-                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                    "where s.rylon_id=vh.id  and vh.product_id=" + lsZakazchik[i].iProductId + " " + strYear;
+                                    "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z " +
+                                    "where s.rylon_id=vh.id and vh.zakaz_id=z.id  and vh.product_id=" + lsZakazchik[i].iProductId + " and z.partiya='" + lsZakazchik[i].strPartiya + "' " + strYear;
 
                     try
                     {
