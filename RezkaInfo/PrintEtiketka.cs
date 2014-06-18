@@ -19,6 +19,7 @@ namespace PrintEtiketkaMy
         bool m_bLandscape = false; //false - книжная ;true - альбомная
         short m_sNumCopies = 1;
         bool m_bPreview = false;
+        bool m_bLogo = true;
 
         PrintDocument docPrint;
 
@@ -144,11 +145,18 @@ namespace PrintEtiketkaMy
             m_bPreview = bPreview;
         }
 
-        public bool SetPrinter(string strPrinterName, int iPaperWidth, int iPaperHeight, bool bLandscape)
+        public void SetLogo(bool bLogo)
+        {
+            m_bLogo = bLogo;
+        }
+
+        public bool SetPrinter(string strPrinterName, int iPaperWidth, int iPaperHeight, bool bLandscape, bool bPreview, bool bLogo)
         {
             SetPrinterName(strPrinterName);
             SetPaperSize(iPaperWidth, iPaperHeight);
             SetLandscape(bLandscape);
+            SetPreview(bPreview);
+            SetLogo(bLogo);
 
             return SetPrinter();
         }
@@ -183,6 +191,7 @@ namespace PrintEtiketkaMy
                 if (m_bPreview == true)
                     dlgPrint.ShowDialog();
                 else docPrint.Print();
+                //dlgPrint.ShowDialog();
 
                 return true;
             }
@@ -206,24 +215,29 @@ namespace PrintEtiketkaMy
             System.Drawing.Font fnt8 = new Font("Times New Roman", 8, FontStyle.Regular);
             System.Drawing.Font fnt8Under = new Font("Times New Roman", 8, FontStyle.Underline);
 
+            System.Drawing.Font fnt7 = new Font("Times New Roman", 7, FontStyle.Regular);
+
             int iLeft = (int)e.PageSettings.PrintableArea.Left + 3;
             int iTop = (int)e.PageSettings.PrintableArea.Top;
             int iRight = (int)e.PageSettings.PrintableArea.Right - 7;
             int iBottom = (int)e.PageSettings.PrintableArea.Bottom - 10;
 
-            e.Graphics.DrawString("ТОВ \"ІТАК\"", fnt8Bold, Brushes.Black, 80, iTop);
+            if (m_bLogo == true)
+            {
+                e.Graphics.DrawString("ТОВ \"ІТАК\"", fnt8Bold, Brushes.Black, 80, iTop);
 
-            iTop += 12;
-            e.Graphics.DrawString("м.Київ, вул. Червоноткацька, 44", fnt8, Brushes.Black, 37, iTop);
+                iTop += 12;
+                e.Graphics.DrawString("м.Київ, вул. Червоноткацька, 44", fnt8, Brushes.Black, 37, iTop);
+            }
 
             iTop += 14;
             e.Graphics.DrawString("Етикетка для пакування", fnt9Bold, Brushes.Black, 45, iTop);
 
             iTop += 18;
-            e.Graphics.DrawString(m_strZakazchik, fnt9, Brushes.Black, iLeft, iTop);
+            e.Graphics.DrawString(m_strZakazchik, fnt8, Brushes.Black, iLeft, iTop);
 
             iTop += 15;
-            e.Graphics.DrawString(m_strProduct, fnt9, Brushes.Black, iLeft, iTop);
+            e.Graphics.DrawString(m_strProduct, fnt7, Brushes.Black, iLeft, iTop);
 
             iTop += 15;
             e.Graphics.DrawString("ТУ У 22.1-16476839-001-2004", fnt9, Brushes.Black, iLeft, iTop);

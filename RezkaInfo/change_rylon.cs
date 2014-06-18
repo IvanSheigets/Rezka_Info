@@ -160,8 +160,13 @@ namespace RezkaInfo
                                                                      Convert.ToDouble(m_MSSQLReader["brytto"]),
                                                                      Convert.ToInt32(m_MSSQLReader["id"]));
 
-
-                                                if (!m_print.SetPrinter(strPrinter, 60, 70, false))
+                                                bool bLogo = true;
+                                                if (checkbox_logo.CheckState == CheckState.Checked)
+                                                    bLogo = true;
+                                                else if (checkbox_logo.CheckState == CheckState.Unchecked)
+                                                    bLogo = false;
+                                                
+                                                if (!m_print.SetPrinter(strPrinter, 60, 70, false,false,bLogo))
                                                     MessageBox.Show("Ошибка печати етикетки");
                                             }
 
@@ -210,6 +215,8 @@ namespace RezkaInfo
                 m_MSSQLCommand = m_MSSQLConnection.CreateCommand();
                 SelectRylon(m_iRylonID);
             }
+
+
         }
 
         private void SelectRylon(int iRylonID)

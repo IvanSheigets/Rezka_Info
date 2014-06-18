@@ -40,12 +40,13 @@
             this.textBox_countEtik = new System.Windows.Forms.TextBox();
             this.textBox_vagaTary = new System.Windows.Forms.TextBox();
             this.label_vagatary = new System.Windows.Forms.Label();
+            this.checkbox_logo = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // button_change
             // 
             this.button_change.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_change.Location = new System.Drawing.Point(70, 194);
+            this.button_change.Location = new System.Drawing.Point(69, 209);
             this.button_change.Name = "button_change";
             this.button_change.Size = new System.Drawing.Size(89, 37);
             this.button_change.TabIndex = 10;
@@ -56,7 +57,7 @@
             // button_cancel
             // 
             this.button_cancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_cancel.Location = new System.Drawing.Point(194, 194);
+            this.button_cancel.Location = new System.Drawing.Point(193, 210);
             this.button_cancel.Name = "button_cancel";
             this.button_cancel.Size = new System.Drawing.Size(89, 37);
             this.button_cancel.TabIndex = 11;
@@ -161,12 +162,27 @@
             this.label_vagatary.TabIndex = 8;
             this.label_vagatary.Text = "Вес тары, кг";
             // 
+            // checkbox_logo
+            // 
+            this.checkbox_logo.AutoSize = true;
+            this.checkbox_logo.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.checkbox_logo.Checked = true;
+            this.checkbox_logo.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkbox_logo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.checkbox_logo.Location = new System.Drawing.Point(21, 175);
+            this.checkbox_logo.Name = "checkbox_logo";
+            this.checkbox_logo.Size = new System.Drawing.Size(192, 20);
+            this.checkbox_logo.TabIndex = 12;
+            this.checkbox_logo.Text = "Этикетка с логотипом";
+            this.checkbox_logo.UseVisualStyleBackColor = true;
+            // 
             // change_rylon
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(351, 243);
+            this.ClientSize = new System.Drawing.Size(351, 259);
             this.ControlBox = false;
+            this.Controls.Add(this.checkbox_logo);
             this.Controls.Add(this.textBox_vagaTary);
             this.Controls.Add(this.label_vagatary);
             this.Controls.Add(this.textBox_countEtik);
@@ -205,5 +221,6 @@
         private System.Windows.Forms.TextBox textBox_countEtik;
         private System.Windows.Forms.TextBox textBox_vagaTary;
         private System.Windows.Forms.Label label_vagatary;
+        private System.Windows.Forms.CheckBox checkbox_logo;
     }
 }

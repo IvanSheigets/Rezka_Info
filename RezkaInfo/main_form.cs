@@ -1727,7 +1727,7 @@ namespace RezkaInfo
             if (dataGridView_product.CurrentCell.RowIndex != -1)
             {
 
-                m_rylon = new rylon_form(1);
+                m_rylon = new rylon_form(1,m_iTypeRegim);
                 m_rylon.m_MSSQLConnection = m_MSSQLConnection;
                 int iListCurSel = dataGridView_product.CurrentCell.RowIndex;
 

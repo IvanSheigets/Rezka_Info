@@ -45,6 +45,8 @@
             this.Check_rylon = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.checkBox_selectAll = new System.Windows.Forms.CheckBox();
             this.button_print = new System.Windows.Forms.Button();
+            this.button_all_label = new System.Windows.Forms.Button();
+            this.checkbox_logo = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_rylon)).BeginInit();
             this.SuspendLayout();
             // 
@@ -200,12 +202,41 @@
             this.button_print.UseVisualStyleBackColor = true;
             this.button_print.Click += new System.EventHandler(this.button_print_Click);
             // 
+            // button_all_label
+            // 
+            this.button_all_label.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.button_all_label.Location = new System.Drawing.Point(12, 393);
+            this.button_all_label.Name = "button_all_label";
+            this.button_all_label.Size = new System.Drawing.Size(190, 40);
+            this.button_all_label.TabIndex = 6;
+            this.button_all_label.Text = "Печать всех этикеток";
+            this.button_all_label.UseVisualStyleBackColor = true;
+            this.button_all_label.Visible = false;
+            this.button_all_label.Click += new System.EventHandler(this.button_all_label_Click);
+            // 
+            // checkbox_logo
+            // 
+            this.checkbox_logo.AutoSize = true;
+            this.checkbox_logo.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.checkbox_logo.Checked = true;
+            this.checkbox_logo.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkbox_logo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.checkbox_logo.Location = new System.Drawing.Point(12, 439);
+            this.checkbox_logo.Name = "checkbox_logo";
+            this.checkbox_logo.Size = new System.Drawing.Size(192, 20);
+            this.checkbox_logo.TabIndex = 13;
+            this.checkbox_logo.Text = "Этикетка с логотипом";
+            this.checkbox_logo.UseVisualStyleBackColor = true;
+            this.checkbox_logo.Visible = false;
+            // 
             // rylon_form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(927, 476);
             this.ControlBox = false;
+            this.Controls.Add(this.checkbox_logo);
+            this.Controls.Add(this.button_all_label);
             this.Controls.Add(this.button_print);
             this.Controls.Add(this.checkBox_selectAll);
             this.Controls.Add(this.dataGridView_rylon);
@@ -237,5 +268,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Check_Time;
         private System.Windows.Forms.DataGridViewCheckBoxColumn Check_rylon;
         private System.Windows.Forms.Button button_print;
+        private System.Windows.Forms.Button button_all_label;
+        private System.Windows.Forms.CheckBox checkbox_logo;
     }
 }

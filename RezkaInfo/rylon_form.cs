@@ -10,6 +10,8 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Drawing.Printing;
 using System.Drawing.Drawing2D;
+using PrintEtiketkaMy;
+using Microsoft.Win32;
 
 
 namespace RezkaInfo
@@ -32,6 +34,7 @@ namespace RezkaInfo
         int m_iCountRows = 0;
         int m_iCounter = 0;
 
+        
 
 
         bool flag = false;
@@ -69,7 +72,7 @@ namespace RezkaInfo
             InitializeComponent();
         }
 
-        public rylon_form(int iTypeDialog)//1- odin vid //2 - neskolko vidov
+        public rylon_form(int iTypeDialog, int iTypeRegim)//1- odin vid //2 - neskolko vidov
         {
             m_iTypeDialog = iTypeDialog;
             InitializeComponent();
@@ -192,10 +195,18 @@ namespace RezkaInfo
             m_dicRylonChecked = new Dictionary<int,int>();
             m_dicRylonColorCheck = new Dictionary<int, int>();
 
+
+
             if (CheckConnect() == true)
             {
                 m_MSSQLCommand = m_MSSQLConnection.CreateCommand();
                 SelectRylon();
+            }
+
+            if (m_iTypeRegim == 2)
+            {
+                button_all_label.Visible = true;
+                checkbox_logo.Visible = true;
             }
 
             if (m_iTypeRegim == 0 || m_iTypeRegim==2)
@@ -1158,6 +1169,112 @@ namespace RezkaInfo
 
 
             
+        }
+
+        private void button_all_label_Click(object sender, EventArgs e)
+        {
+            if (m_iTypeRegim == 2)
+            {
+               /* int iRowSelect = -1;
+                for (int i = 0; i < dataGridView_rylon.Rows.Count; i++)
+                    if (dataGridView_rylon.Rows[i].Selected == true)
+                    {
+                        iRowSelect = i;
+                        break;
+                    }
+
+                if (iRowSelect != -1)
+                {
+                    if (dataGridView_rylon.Rows[iRowSelect].DefaultCellStyle.BackColor != Color.Brown)
+                    {
+                       // m_delChange = new delChange_form();
+                        //m_delChange.ShowDialog();
+
+                        string strKey = dataGridView_rylon.Rows[iRowSelect].Cells["Num_rylon"].Value.ToString() + " - " +
+                                               dataGridView_rylon.Rows[iRowSelect].Cells["Brytto"].Value.ToString() + " - " +
+                                               dataGridView_rylon.Rows[iRowSelect].Cells["Netto"].Value.ToString() + " - " +
+                                               dataGridView_rylon.Rows[iRowSelect].Cells["Dlina"].Value.ToString() + " - " +
+                                               dataGridView_rylon.Rows[iRowSelect].Cells["CountEtik"].Value.ToString();
+
+                        int iRylonID = Convert.ToInt32(m_dicRylon[strKey]);
+
+                        MessageBox.Show(iRylonID.ToString());
+
+                    }
+                }*/
+
+                int iCounter = 0; 
+                string strRylon="";
+
+                string strPrinter = "";
+                RegistryKey readKey = Registry.LocalMachine.OpenSubKey("software\\rezka_info");
+                if (readKey != null)
+                {
+                    strPrinter = (string)readKey.GetValue("PrinterEtiketki");
+                    readKey.Close();
+                }
+
+                if (strPrinter != null)
+                {
+                    PrintEtiketka m_print = new PrintEtiketka();
+
+                    for (int i = 0; i < dataGridView_rylon.Rows.Count; i++)
+                    {
+                        if (dataGridView_rylon.Rows[i].DefaultCellStyle.BackColor != Color.Brown)
+                        {
+                            string strKey = dataGridView_rylon.Rows[i].Cells["Num_rylon"].Value.ToString() + " - " +
+                                                   dataGridView_rylon.Rows[i].Cells["Brytto"].Value.ToString() + " - " +
+                                                   dataGridView_rylon.Rows[i].Cells["Netto"].Value.ToString() + " - " +
+                                                   dataGridView_rylon.Rows[i].Cells["Dlina"].Value.ToString() + " - " +
+                                                   dataGridView_rylon.Rows[i].Cells["CountEtik"].Value.ToString();
+
+                            int iRylonID = Convert.ToInt32(m_dicRylon[strKey]);
+
+                            strMSSQLQuery = "select vh.brytto-vh.vagatary,convert(date,z.datezakaz), zk.zakazchik_name, pr.product_name, z.partiya, z.machine, z.smena, pm.product_material, pt.product_tols, " +
+                                        "vh.width, vh.dlinarylona, vh.koletiketki, vh.num_rylon,  vh.brytto, vh.id " +
+                                        "from itak_etiketka.dbo.itak_zakazchik zk, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakaz z, " +
+                                        "itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt, itak_etiketka.dbo.itak_vihidrylon vh " +
+                                        "where z.zakazchik_id=zk.id and z.productmaterial_id = pm.id and z.producttols_id=pt.id " +
+                                        "and vh.zakaz_id=z.id and vh.product_id=pr.id and vh.id=" + iRylonID;
+                            m_MSSQLCommand.CommandText = strMSSQLQuery;
+                            m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
+
+                            while (m_MSSQLReader.Read())
+                            {
+                                m_print.SetParametrs(m_MSSQLReader["zakazchik_name"].ToString().Trim(),
+                                                     m_MSSQLReader["product_name"].ToString().Trim(),
+                                                     m_MSSQLReader["partiya"].ToString().Trim(),
+                                                     Convert.ToInt32(m_MSSQLReader["machine"]),
+                                                     Convert.ToInt32(m_MSSQLReader["smena"]),
+                                                     m_MSSQLReader["product_material"].ToString().Trim(),
+                                                     Convert.ToInt32(m_MSSQLReader["product_tols"]),
+                                                     Convert.ToInt32(m_MSSQLReader["width"]),
+                                                     Convert.ToInt32(m_MSSQLReader["dlinarylona"]),
+                                                     Convert.ToInt32(m_MSSQLReader["koletiketki"]),
+                                                     m_MSSQLReader[1].ToString().Trim(),
+                                                     Convert.ToInt32(m_MSSQLReader["num_rylon"]),
+                                                     Convert.ToDouble(m_MSSQLReader[0]),
+                                                     Convert.ToDouble(m_MSSQLReader["brytto"]),
+                                                     Convert.ToInt32(m_MSSQLReader["id"]));
+
+                                bool bLogo = true;
+                                if (checkbox_logo.CheckState == CheckState.Checked)
+                                    bLogo = true;
+                                else if (checkbox_logo.CheckState == CheckState.Unchecked)
+                                    bLogo = false;
+
+                                if (!m_print.SetPrinter(strPrinter, 60, 70, false, false, bLogo))
+                                    MessageBox.Show("Ошибка печати етикетки");
+                            }
+
+                            m_MSSQLReader.Close();
+                            
+                       }
+
+                    }
+                    m_print = null;
+                }
+            }
         }
 
 
