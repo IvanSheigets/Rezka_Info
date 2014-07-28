@@ -501,12 +501,12 @@ namespace RezkaInfo
                                 if (CheckConnect())
                                 {
                                     DateTime dt = System.DateTime.Now;
-                                    string strCheckTime = dt.Year + "." + dt.Month + "." + dt.Day + " " + dt.Hour + ":" + dt.Minute + ":" + dt.Second;
+                                    string strCheckTime = dt.Year + "." + dt.Day + "." + dt.Month + " " + dt.Hour + ":" + dt.Minute + ":" + dt.Second;
                                     if(m_iTypeRegim==1)
                                         strMSSQLQuery = "update itak_etiketka.dbo.itak_vihidrylon set  state_rylon=2, check_men=" + m_iCheckMen + ", check_time='" + strCheckTime + "' where id=" + iRylonID;
                                     else if (m_iTypeRegim == 2)
-                                        strMSSQLQuery = "update itak_etiketka.dbo.itak_vihidrylon set state_rylon=2, check_time='" + strCheckTime + "' where id=" + iRylonID;
-
+                                        strMSSQLQuery = "update itak_etiketka.dbo.itak_vihidrylon set state_rylon=2, check_time=CONVERT (SMALLDATETIME, '" + strCheckTime + "',103) where id=" + iRylonID;
+                                     
                                     m_MSSQLCommand.CommandText = strMSSQLQuery;
                                     m_MSSQLCommand.ExecuteNonQuery();
                                     
