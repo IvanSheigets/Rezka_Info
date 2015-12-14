@@ -53,7 +53,8 @@
             "1",
             "2",
             "3",
-            "4"});
+            "4",
+            "5"});
             this.comboBox_checkMen.Location = new System.Drawing.Point(17, 35);
             this.comboBox_checkMen.Name = "comboBox_checkMen";
             this.comboBox_checkMen.Size = new System.Drawing.Size(121, 24);

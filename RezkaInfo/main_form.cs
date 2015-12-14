@@ -22,6 +22,7 @@ namespace RezkaInfo
         public int iProductId;
         public string strProductName;
         public string strPartiya;
+        public string strManager;
     }
 
     struct ProductInfo
@@ -99,6 +100,7 @@ namespace RezkaInfo
         Dictionary<string, string> m_dicMaterial;
         Dictionary<string, string> m_dicWidth;
         Dictionary<string, string> m_dicTols;
+        Dictionary<string, string> m_dicManager;
 
 
         
@@ -107,6 +109,7 @@ namespace RezkaInfo
         password_form m_password = null;
         settings_form m_settings = null;
         selectUser_form m_selectUser = null;
+        delChange_form m_delChangeForm = null;
 
         int m_iAddSkladCountRows = 0;
         int m_iAddSkladPrintPage = 0;
@@ -130,11 +133,19 @@ namespace RezkaInfo
         int m_iRezkaAllCountEtik = 0;
         double m_dRezkaAllNetto = 0;
         double m_dRezkaAllBrytto = 0;
+        //string m_strRezkaManager = "";
 
         Dictionary<string, int> m_dicRezkaProduct;
         Dictionary<string, stProductInfo> m_dicRezkaProductInfo;
 
-        
+
+        int m_iCountCheckedZakaz = 0;
+
+        stProductInfoObschee prObscheeInfo ;
+        stProductInfoSmall stRezka; 
+        stProductInfoSmall stPrinyato; 
+        stProductInfoSmall stOtgryjeno;
+        stProductInfoSmall stOstatki;
 
 
 
@@ -146,6 +157,8 @@ namespace RezkaInfo
         Dictionary<string, int> m_dicZakazchikID;
         Dictionary<int, string> m_dicProductID;
         Dictionary<int, string> m_dicZakazID;
+
+        Dictionary<string, int> m_dicSkladManager;
 
         List<Zakazchik> m_lsZakazchik;
         List<ProductInfo> m_lsProductInfo;
@@ -255,13 +268,14 @@ namespace RezkaInfo
         private void Form1_Load(object sender, EventArgs e)
         {
             //strMSSQLConnectionString = "Database=itak_etiketka;Data Source=127.0.0.1;User Id=ivan;Password=coolworld";
-            strMSSQLConnectionString = "Database=itak_etiketka;Data Source=192.168.0.9;User Id=ivan;Password=coolworld";
+            strMSSQLConnectionString = "Database=itak_etiketka;Data Source=192.168.0.14;User Id=Ivan;Password=coolworld";
             m_MSSQLConnection = new SqlConnection(strMSSQLConnectionString);
 
             m_dicZakaz = new Dictionary<string, int>();
             m_dicProduct = new Dictionary<string, int>();
             m_dicDlinaEtiketki = new Dictionary<string, string>();
             m_dicMaterial = new Dictionary<string,string>();
+            m_dicManager = new Dictionary<string, string>();
             m_dicWidth = new Dictionary<string, string>();
             m_dicTols = new Dictionary<string, string>();
 
@@ -275,7 +289,7 @@ namespace RezkaInfo
 
             //m_dicAddSkladProduct = new Dictionary<string, int>();
 
-
+            //tabControl1.Controls.Remove(tabPage2);
             try
             {
                 m_MSSQLConnection.Open();
@@ -318,6 +332,7 @@ namespace RezkaInfo
                 m_dicZakazchikID = new Dictionary<string, int>();
                 m_dicProductID = new Dictionary<int, string>();
                 m_dicZakazID = new Dictionary<int, string>();
+                m_dicSkladManager = new Dictionary<string, int>();
 
                 zk = new Zakazchik();
                 pr = new ProductInfo();
@@ -336,6 +351,11 @@ namespace RezkaInfo
                 comboBoxSkladOtgryz_Zakazchik.Items.Clear();
                 comboBoxSkladAdd_Zakazchik.Items.Clear();
 
+                comboBoxSkladAdd_Manager.Items.Clear();
+                comboBoxSkladOtgryz_Manager.Items.Clear();
+                comboBoxSkladOstatki_Manager.Items.Clear();
+
+
                 strMSSQLQuery = "select id, zakazchik_name from itak_etiketka.dbo.itak_zakazchik order by zakazchik_name asc";
                 m_MSSQLCommand.CommandText = strMSSQLQuery;
                 m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
@@ -349,6 +369,21 @@ namespace RezkaInfo
                 }
                 m_MSSQLReader.Close();
 
+
+                strMSSQLQuery = "select id, manager_name from itak_etiketka.dbo.itak_manager order by manager_name asc";
+                m_MSSQLCommand.CommandText = strMSSQLQuery;
+                m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
+
+                while (m_MSSQLReader.Read())
+                {
+                    m_dicSkladManager.Add(m_MSSQLReader["manager_name"].ToString().Trim(), Convert.ToInt32(m_MSSQLReader["id"]));
+                    comboBoxSkladAdd_Manager.Items.Add(m_MSSQLReader["manager_name"].ToString().Trim());
+                    comboBoxSkladOtgryz_Manager.Items.Add(m_MSSQLReader["manager_name"].ToString().Trim());
+                    comboBoxSkladOstatki_Manager.Items.Add(m_MSSQLReader["manager_name"].ToString().Trim());
+                }
+                m_MSSQLReader.Close();
+                               
+
                 CreateColumnNeOtgryj(ref dataGridViewSklad_AddProduct);
                 
 
@@ -356,10 +391,12 @@ namespace RezkaInfo
                 string strDateEnd = dateTimePickerAddSklad_End.Value.Year + "-" + dateTimePickerAddSklad_End.Value.Month + "-" + (dateTimePickerAddSklad_End.Value.Day);
                 //SelectSearchProduct(1, "", "", 0, strDateStart, strDateEnd);
 
-                SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_AddProduct, 0, ref m_lsAddSkladZakazchik, ref m_lsAddSkladProductInfo);
+                SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_AddProduct, 0, ref m_lsAddSkladZakazchik, ref m_lsAddSkladProductInfo,"");
 
 
                 CreateDataGridOdscheeProduct();
+                ChangeSize();
+                
                 
                 //tabPage2.Enabled = false;
                 //tabPage3.Enabled = false;
@@ -409,10 +446,13 @@ namespace RezkaInfo
 
             cColumns[7].HeaderText = "К-во этикетки";
             cColumns[7].Name = "CountEtiketki";
+            
+            cColumns[8].HeaderText = "Менеджер";
+            cColumns[8].Name = "SkladAddManager";
 
             ChangeColumnSize(ref data);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
                 data.Columns.Add(cColumns[i]);
 
             m_iColumnType = 1;
@@ -422,14 +462,15 @@ namespace RezkaInfo
         private void ChangeColumnSize(ref DataGridView data)
         {
             int iWidth = data.ClientSize.Width;
+            //int iWidth = data.Size.Width;
             iWidth -= 40;
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 if (cColumns[2].Visible == true)
                 {
                     if (i == 0) cColumns[i].Width = 40;
                     else if (i >= 1 && i < 3) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 2) - 13;
-                    else if (i >= 3) cColumns[i].Width = (iWidth - (iWidth / 2)) / 5;
+                    else if (i >= 3) cColumns[i].Width = (iWidth - (iWidth / 2)) / 6;
                 }
                /* else if (cColumns[2].Visible == false)
                 {
@@ -438,6 +479,8 @@ namespace RezkaInfo
                     else if (i >= 2) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 4) - 8;
                 }*/
             }
+
+           
         }
 
         public int maxDays(int year, int month)
@@ -452,7 +495,7 @@ namespace RezkaInfo
 
         private void SelectAddSkladProduct(string strZakazchik, string strPartiya, string strDateStart, 
                                             string strDateEnd, ref DataGridView dataGrid, int iTypeFunc,
-                                            ref List<Zakazchik> lsZakazchik, ref List<ProductInfo> lsProductInfo) //0 - Add 1 - Otgryz  2-ostatki
+                                            ref List<Zakazchik> lsZakazchik, ref List<ProductInfo> lsProductInfo, string strManager) //0 - Add 1 - Otgryz  2-ostatki
         {
             if (CheckConnect())
             {
@@ -461,6 +504,8 @@ namespace RezkaInfo
 
                 string strZakazchikID = "";
                 string strYear = "";
+                string strManagerID = " ";
+
 
                 
                 if (strZakazchik.Length != 0)
@@ -476,6 +521,11 @@ namespace RezkaInfo
                     ChangeColumnSize(ref dataGrid);
                 }
 
+                if (strManager.Length != 0)
+                {
+                    strManagerID = " and m.id="+m_dicSkladManager[strManager];
+                }
+
                 if (strPartiya.Length != 0)
                 {
                     strPartiya = " and z.partiya like '%" + strPartiya + "%'";
@@ -488,7 +538,6 @@ namespace RezkaInfo
                     //cColumns[2].Visible = false;
                     ChangeColumnSize(ref dataGrid);
                 }
-
 
                 if (iTypeFunc == 0)
                 {
@@ -506,9 +555,9 @@ namespace RezkaInfo
                         strYear = " and (convert(date,date_postyp,101) >= '" + strDateStart + "' and convert(date,date_postyp,101)<='" + strDateEnd + "') ";
 
 
-                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya  " +
-                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk " +
-                                  " where z.zakazchik_id=zk.id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id " + strYear + strZakazchikID + strPartiya + " order by zk.zakazchik_name asc";
+                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya,  m.manager_name  " +
+                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk, itak_etiketka.dbo.itak_manager m " +
+                                  " where z.zakazchik_id=zk.id and m.id=z.manager_id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id " + strYear + strZakazchikID + strPartiya + strManagerID + " order by zk.zakazchik_name asc";
                 }
                 else if (iTypeFunc==1)
                 {
@@ -525,15 +574,15 @@ namespace RezkaInfo
                     else
                         strYear = " and (convert(date,date_otgryz,101) >= '" + strDateStart + "' and convert(date,date_otgryz,101)<='" + strDateEnd + "') ";
 
-                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya  " +
-                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk " +
-                                  " where z.zakazchik_id=zk.id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id and s.rylon_state=2 " + strYear + strZakazchikID + strPartiya + " order by zk.zakazchik_name asc";
+                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya, m.manager_name  " +
+                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk, itak_etiketka.dbo.itak_manager m " +
+                                  " where z.zakazchik_id=zk.id and m.id=z.manager_id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id and s.rylon_state=2 " + strYear + strZakazchikID + strPartiya + strManagerID+" order by zk.zakazchik_name asc";
                 }
                 else if (iTypeFunc==2)
                 {
-                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya  " +
-                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk " +
-                                  " where z.zakazchik_id=zk.id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id and s.rylon_state=1 " + strZakazchikID + strPartiya + " order by zk.zakazchik_name asc";
+                    strMSSQLQuery = "select distinct zk.id,zk.zakazchik_name, pr.id, pr.product_name, z.partiya,  m.manager_name  " +
+                                  " from itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_zakazchik zk, itak_etiketka.dbo.itak_manager m " +
+                                  " where z.zakazchik_id=zk.id and m.id=z.manager_id and z.id=vh.zakaz_id and vh.product_id=pr.id and z.id=s.zakaz_id and vh.id=s.rylon_id and s.rylon_state=1 " + strZakazchikID + strPartiya +strManagerID+ " order by zk.zakazchik_name asc";
 
                 }
 
@@ -552,6 +601,7 @@ namespace RezkaInfo
                         zk.iProductId = Convert.ToInt32(m_MSSQLReader[2]);
                         zk.strProductName = m_MSSQLReader[3].ToString().Trim();
                         zk.strPartiya = m_MSSQLReader[4].ToString().Trim();
+                        zk.strManager = m_MSSQLReader[5].ToString().Trim();
                         
                         lsZakazchik.Add(zk);
 
@@ -589,7 +639,7 @@ namespace RezkaInfo
                     else
                         strMSSQLQuery = "select COUNT(vh.id) , ROUND(sum(vh.brytto-vh.vagatary),3), ROUND(sum(vh.brytto),3), SUM(vh.koletiketki),SUM(vh.dlinarylona) " +
                                     "from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s, itak_etiketka.dbo.itak_zakaz z " +
-                                    "where s.rylon_id=vh.id and vh.zakaz_id=z.id  and vh.product_id=" + lsZakazchik[i].iProductId + " and z.partiya='" + lsZakazchik[i].strPartiya + "' " + strYear;
+                                     "where s.rylon_id=vh.id and vh.zakaz_id=z.id  and vh.product_id=" + lsZakazchik[i].iProductId + " and z.partiya='" + lsZakazchik[i].strPartiya + "' " + strYear;
 
                     try
                     {
@@ -619,8 +669,6 @@ namespace RezkaInfo
                         pr.strPartiya = lsZakazchik[i].strPartiya;
                         lsProductInfo.Add(pr);
 
-                        
-
                         m_MSSQLReader.Close();
                     }
                     catch (System.Exception ex)
@@ -630,8 +678,6 @@ namespace RezkaInfo
                         m_MSSQLReader.Close();
                     }
                     
-
-
                 }
 
                 int iCountRylon = 0;
@@ -649,12 +695,12 @@ namespace RezkaInfo
                     dataGrid.Rows[i].Cells["Product"].Value = lsZakazchik[i].strProductName;
                     dataGrid.Rows[i].Cells["Partiya"].Value = lsZakazchik[i].strPartiya;
 
-
                     dataGrid.Rows[iNumber].Cells["CountRylon"].Value = lsProductInfo[i].iCountRylon;
                     dataGrid.Rows[iNumber].Cells["CountEtiketki"].Value = lsProductInfo[i].iCountEtik;
                     dataGrid.Rows[iNumber].Cells["Netto"].Value = lsProductInfo[i].dNetto; ;
                     dataGrid.Rows[iNumber].Cells["Brytto"].Value = lsProductInfo[i].dBrytto;
-                   
+
+                    dataGrid.Rows[i].Cells["SkladAddManager"].Value = lsZakazchik[i].strManager;
 
                     if (i % 2 == 0)
                         dataGrid.Rows[i].DefaultCellStyle.BackColor = Color.LightGreen;
@@ -663,7 +709,6 @@ namespace RezkaInfo
                     
                     toolStripProgressBar1.Value += iProgres;
                 }
-
 
                 for (int j = 0; j < lsProductInfo.Count; j++)
                 {
@@ -757,7 +802,7 @@ namespace RezkaInfo
 
                 //if (checkBoxEnableDate.Checked == true)
                
-                 if (textBoxSkladAdd_NumberTZ.Text.Length==0)
+                if (textBoxSkladAdd_NumberTZ.Text.Length==0)
                 {
                     
                     if (iCheckBoxSatate == 1)
@@ -1090,7 +1135,7 @@ namespace RezkaInfo
                 label_checkMenValue.Visible = true;
                 button_changeCheckMen.Visible = true;
             }
-            else if (m_iTypeRegim == 0 || m_iTypeRegim==2)
+            else if (m_iTypeRegim == 0 || m_iTypeRegim==2 || m_iTypeRegim==3)
             {
                 label_checkMenLab.Visible = false;
                 label_checkMenValue.Visible = false;
@@ -1141,6 +1186,8 @@ namespace RezkaInfo
             string strListInfo = "";
             string strStatus = "";
             string strStatusOTK = "";
+            string strManager = "";
+
             int i=1;
             while (m_MSSQLReader.Read())
             {
@@ -1148,13 +1195,17 @@ namespace RezkaInfo
                 strDate1 = strDate1.Remove(strDate1.IndexOf(' '));
                 strStatus = m_MSSQLReader["timeendzakaz"].ToString().Trim();
                 strStatusOTK = m_MSSQLReader["check_zakaz"].ToString().Trim();
+                strManager = m_MSSQLReader["manager_name"].ToString().Trim();
+
 
                 
                 dataGridView_rezkaZakaz.Rows.Add(i.ToString(), 
                                         m_MSSQLReader["zakazchik_name"].ToString().Trim(),
                                         m_MSSQLReader["partiya"].ToString().Trim(),
                                         strDate1,
-                                        m_MSSQLReader["timestartzakaz"].ToString().Trim()
+                                        m_MSSQLReader["timestartzakaz"].ToString().Trim(),
+                                        "",
+                                        strManager
                                         );
 
                 strListInfo = m_MSSQLReader["zakazchik_name"].ToString().Trim() +
@@ -1164,6 +1215,8 @@ namespace RezkaInfo
                 m_dicZakaz.Add(strListInfo, Convert.ToInt32(m_MSSQLReader["id"].ToString().Trim()));
                 m_dicDlinaEtiketki.Add(m_MSSQLReader["id"].ToString().Trim(), m_MSSQLReader["dlinaetiketki"].ToString().Trim());
                 m_dicMaterial.Add(m_MSSQLReader["id"].ToString().Trim(), m_MSSQLReader["product_material"].ToString().Trim());
+                m_dicManager.Add(m_MSSQLReader["id"].ToString().Trim(), m_MSSQLReader["manager_name"].ToString().Trim());
+
                 m_dicTols.Add(m_MSSQLReader["id"].ToString().Trim(), m_MSSQLReader["product_tols"].ToString().Trim());
 
                 if (strStatus.Length == 0)
@@ -1273,6 +1326,7 @@ namespace RezkaInfo
             m_dicZakaz.Clear();
             m_dicDlinaEtiketki.Clear();
             m_dicMaterial.Clear();
+            m_dicManager.Clear();
             m_dicTols.Clear();
 
             int iSelectProduct = -1;
@@ -1290,24 +1344,24 @@ namespace RezkaInfo
 
             if (strDate.Length!=0 && strPartiya.Length==0)
             {
-                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols " +
-                           "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt " +
-                           "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and z.datezakaz='" + strDate + "' order by z.timestartzakaz ASC";
+                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols,m.manager_name " +
+                           "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt, itak_etiketka.dbo.itak_manager m " +
+                           "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and m.id=z.manager_id and z.state=1 and z.datezakaz='" + strDate + "' order by z.timestartzakaz ASC";
                 SelectZakazInfo(strMSSQLQuery);
 
             }
             else if (strPartiya.Length!=0 && strDate.Length==0)
             {
-                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols  " +
-                          "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt " +
-                          "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and z.partiya like'%" + strPartiya + "%' order by z.timestartzakaz ASC";
+                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols,m.manager_name  " +
+                          "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt, itak_etiketka.dbo.itak_manager m " +
+                          "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and m.id=z.manager_id and z.state=1 and z.partiya like'%" + strPartiya + "%' order by z.timestartzakaz ASC";
                 SelectZakazInfo(strMSSQLQuery);
             }
             else if(strDate.Length!=0 && strPartiya.Length!=0)
             {
-                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols  " +
-                          "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt " +
-                          "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and z.partiya like '%" + strPartiya + "%' and z.datezakaz='" + strDate + "' order by z.timestartzakaz ASC";
+                strMSSQLQuery = "select z.id,zn.zakazchik_name, z.partiya, z.datezakaz, z.timestartzakaz, z.timeendzakaz, z.check_zakaz, z.dlinaetiketki, pm.product_material, pt.product_tols,m.manager_name  " +
+                          "from itak_etiketka.dbo.itak_zakazchik zn, itak_etiketka.dbo.itak_zakaz z, itak_etiketka.dbo.itak_productmaterial pm, itak_etiketka.dbo.itak_producttols pt, itak_etiketka.dbo.itak_manager m " +
+                          "where z.zakazchik_id=zn.id and pm.id=z.productmaterial_id and z.producttols_id=pt.id and m.id=z.manager_id and z.state=1 and z.partiya like '%" + strPartiya + "%' and z.datezakaz='" + strDate + "' order by z.timestartzakaz ASC";
                 SelectZakazInfo(strMSSQLQuery);
             }          
         }
@@ -1364,6 +1418,7 @@ namespace RezkaInfo
                 label_koletiket.Text = m_iKolEtiketki.ToString() + " шт";
                 label_mp.Text = m_iDlinaRylona.ToString() + " м";
                 label_Material.Text = m_strMaterial;
+                label_rezkaManagerValue.Text = m_dicManager[m_iZakazID.ToString()];
                 label_DlinaEtiketkiValue.Text = m_strDlinaEtiketki + " мм";
 
                 SelectProduct(m_dicZakaz[strListInfo]);
@@ -1676,6 +1731,7 @@ namespace RezkaInfo
                     label_koletiket.Text = m_iKolEtiketki.ToString() + " шт";
                     label_mp.Text = m_iDlinaRylona.ToString() + " м";
                     label_Material.Text = m_strMaterial;
+                    label_rezkaManagerValue.Text = m_strRezkaManager;
                     label_DlinaEtiketkiValue.Text = m_strDlinaEtiketki+" мм";
 
                 }
@@ -2226,21 +2282,26 @@ namespace RezkaInfo
         private void button1_Click(object sender, EventArgs e)
         {
             //RefreshTable();
-            RefreshAddSklad(textBoxSkladAdd_NumberTZ, comboBoxSkladAdd_Zakazchik, dateTimePickerAddSklad_Start, dateTimePickerAddSklad_End,0);
+            RefreshAddSklad(textBoxSkladAdd_NumberTZ, comboBoxSkladAdd_Zakazchik, dateTimePickerAddSklad_Start, dateTimePickerAddSklad_End,0, comboBoxSkladAdd_Manager);
         }
 
-        private void RefreshAddSklad(TextBox textNumberTZ, ComboBox comboZakazchik, DateTimePicker dateStart, DateTimePicker dateEnd, int iTypeFunc)    //0-AddSklad    1-OtgryzSklad
+        private void RefreshAddSklad(TextBox textNumberTZ, ComboBox comboZakazchik, DateTimePicker dateStart, DateTimePicker dateEnd, int iTypeFunc, ComboBox comboManager)    //0-AddSklad    1-OtgryzSklad
         {
             string strPartiya = "";
             string strZakazchik = "";
             string strDateStart = "";
             string strDateEnd = "";
+            string strManager = ""; 
 
             if (textNumberTZ.Text.Length != 0)
                 strPartiya = textNumberTZ.Text;
 
             if (comboZakazchik.SelectedIndex != -1)
                 strZakazchik = comboZakazchik.Items[comboZakazchik.SelectedIndex].ToString();
+
+            if (comboManager.SelectedIndex != -1)
+                strManager = comboManager.Items[comboManager.SelectedIndex].ToString();
+
 
             strDateStart = dateStart.Value.Year + "-" + dateStart.Value.Month + "-" + dateStart.Value.Day;
             strDateEnd = dateEnd.Value.Year + "-" + dateEnd.Value.Month + "-" + (dateEnd.Value.Day);
@@ -2266,13 +2327,13 @@ namespace RezkaInfo
             strDateEnd = iYear + "-" + iMounth + "-" + iDay;
             if (iTypeFunc==0)
                 SelectAddSkladProduct(strZakazchik, strPartiya, strDateStart, strDateEnd, ref dataGridViewSklad_AddProduct,0,
-                                    ref m_lsAddSkladZakazchik, ref m_lsAddSkladProductInfo);
+                                    ref m_lsAddSkladZakazchik, ref m_lsAddSkladProductInfo, strManager);
             else if (iTypeFunc==1)
                 SelectAddSkladProduct(strZakazchik, strPartiya, strDateStart, strDateEnd, ref dataGridViewSklad_OtgryzProduct, 1,
-                                    ref m_lsOtgryzSkladZakazchik, ref m_lsOtgryzSkladProductInfo);
+                                    ref m_lsOtgryzSkladZakazchik, ref m_lsOtgryzSkladProductInfo, strManager);
             else if (iTypeFunc==2)
                 SelectAddSkladProduct(strZakazchik, strPartiya, strDateStart, strDateEnd, ref dataGridViewSklad_OstatkiProduct, 2,
-                                    ref m_lsOstatkiSkladZakazchik, ref m_lsOstatkiSkladProductInfo);
+                                    ref m_lsOstatkiSkladZakazchik, ref m_lsOstatkiSkladProductInfo, strManager);
             
         }
 
@@ -2339,7 +2400,7 @@ namespace RezkaInfo
         private void textBox_numberTZ_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Return)
-                RefreshAddSklad(textBoxSkladAdd_NumberTZ, comboBoxSkladAdd_Zakazchik, dateTimePickerAddSklad_Start, dateTimePickerAddSklad_End,0);
+                RefreshAddSklad(textBoxSkladAdd_NumberTZ, comboBoxSkladAdd_Zakazchik, dateTimePickerAddSklad_Start, dateTimePickerAddSklad_End,0,comboBoxSkladAdd_Manager);
         }
 
 
@@ -2480,9 +2541,7 @@ namespace RezkaInfo
                         break;
                     }
                 }
-                
             }
-                    
         }
 
         private void dataGridViewSklad_result_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -2493,7 +2552,7 @@ namespace RezkaInfo
 
         private void dataGridView_product_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right && m_iTypeRegim == 2)
+            if (e.Button == MouseButtons.Right && (m_iTypeRegim == 2|| m_iTypeRegim==3))
             {
                 if (e.RowIndex != -1)
                 {
@@ -2542,7 +2601,7 @@ namespace RezkaInfo
                         int iZakazID = m_dicZakaz[strListInfo];
 
 
-                        change_Zakaz_rezka changeZakazForm = new change_Zakaz_rezka(iZakazID);
+                        change_Zakaz_rezka changeZakazForm = new change_Zakaz_rezka(iZakazID, m_iTypeRegim);
                         changeZakazForm.m_MSSQLConnection = m_MSSQLConnection;
 
                         changeZakazForm.ShowDialog();
@@ -2552,6 +2611,65 @@ namespace RezkaInfo
                         }
 
                     }
+                }
+            }
+            else
+            {
+                if (e.Button == MouseButtons.Right && m_iTypeRegim == 3)
+                {
+                    dataGridView_rezkaZakaz.Rows[e.RowIndex].Selected = true;
+                    m_delChangeForm = new delChange_form();
+                    m_delChangeForm.ShowDialog();
+
+                    if (m_delChangeForm.GetDialogResult() == 1) //change
+                    {
+                        if (dataGridView_rezkaZakaz.Rows.Count != -1)
+                        {
+                            if (e.RowIndex != -1)
+                            {
+                                dataGridView_rezkaZakaz.Rows[e.RowIndex].Selected = true;
+                                string strListInfo = dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[1].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[2].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[3].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[4].Value.ToString();
+                                int iZakazID = m_dicZakaz[strListInfo];
+
+
+                                change_Zakaz_rezka changeZakazForm = new change_Zakaz_rezka(iZakazID, m_iTypeRegim);
+                                changeZakazForm.m_MSSQLConnection = m_MSSQLConnection;
+
+                                changeZakazForm.ShowDialog();
+                                if (changeZakazForm.GetDialogResult() == 1)
+                                {
+                                    RefreshBut();
+                                }
+
+                            }
+                        }
+                    }
+                    else if (m_delChangeForm.GetDialogResult() == 2)    //del
+                    {
+                        if (MessageBox.Show(this, "Вы действительно хотите удалить заказ партия №" + dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[2].Value.ToString().Trim() + "??", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                        {
+                            if (CheckConnect())
+                            {
+                                dataGridView_rezkaZakaz.Rows[e.RowIndex].Selected = true;
+                                string strListInfo = dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[1].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[2].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[3].Value.ToString() +
+                                             dataGridView_rezkaZakaz.Rows[e.RowIndex].Cells[4].Value.ToString();
+                                int iZakazID = m_dicZakaz[strListInfo];
+                               // MessageBox.Show(iZakazID.ToString());
+
+                                strMSSQLQuery = "update itak_etiketka.dbo.itak_zakaz set state=0 where id=" + iZakazID;
+
+                                m_MSSQLCommand.CommandText = strMSSQLQuery;
+                                m_MSSQLCommand.ExecuteNonQuery();
+                                RefreshBut();
+                            }
+                        }
+                    }
+
                 }
             }
         }
@@ -2791,7 +2909,7 @@ namespace RezkaInfo
 
         private void button_OtgryzSkladRefresh_Click(object sender, EventArgs e)
         {
-            RefreshAddSklad(textBoxSkladOtgryz_NymberTZ, comboBoxSkladOtgryz_Zakazchik, dateTimePickerOtgryzSklad_Start, dateTimePickerOtgryzSklad_End, 1);
+            RefreshAddSklad(textBoxSkladOtgryz_NymberTZ, comboBoxSkladOtgryz_Zakazchik, dateTimePickerOtgryzSklad_Start, dateTimePickerOtgryzSklad_End, 1, comboBoxSkladOtgryz_Manager);
         }
 
         private void dataGridViewSklad_OtgryzProduct_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -2811,7 +2929,7 @@ namespace RezkaInfo
 
         private void button_OstatkiSkladRefresh_Click(object sender, EventArgs e)
         {
-            RefreshAddSklad(textBoxSkladOstatki_NymberTZ, comboBoxSkladOstatki_Zakazchik, dateTimePickerOtgryzSklad_Start, dateTimePickerOtgryzSklad_End, 2);
+            RefreshAddSklad(textBoxSkladOstatki_NymberTZ, comboBoxSkladOstatki_Zakazchik, dateTimePickerOtgryzSklad_Start, dateTimePickerOtgryzSklad_End, 2, comboBoxSkladOstatki_Manager);
         }
 
         private void button_PrintSkladRefresh_Click(object sender, EventArgs e)
@@ -2828,7 +2946,7 @@ namespace RezkaInfo
                     string strDateStart = dateTimePickerOtgryzSklad_Start.Value.Year + "-" + dateTimePickerOtgryzSklad_Start.Value.Month + "-" + dateTimePickerOtgryzSklad_Start.Value.Day;
                     string strDateEnd = dateTimePickerOtgryzSklad_End.Value.Year + "-" + dateTimePickerOtgryzSklad_End.Value.Month + "-" + (dateTimePickerOtgryzSklad_End.Value.Day);
                     CreateColumnNeOtgryj(ref dataGridViewSklad_OtgryzProduct);
-                    SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_OtgryzProduct, 1, ref m_lsOtgryzSkladZakazchik, ref m_lsOtgryzSkladProductInfo);
+                    SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_OtgryzProduct, 1, ref m_lsOtgryzSkladZakazchik, ref m_lsOtgryzSkladProductInfo,"");
                 }
             }
             else if (tabControl_Sklad.SelectedIndex == 2)
@@ -2839,7 +2957,7 @@ namespace RezkaInfo
                     string strDateStart = DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day;
                     string strDateEnd = DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day;
                     CreateColumnNeOtgryj(ref dataGridViewSklad_OstatkiProduct);    
-                    SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_OstatkiProduct, 2, ref m_lsOstatkiSkladZakazchik, ref m_lsOstatkiSkladProductInfo);
+                    SelectAddSkladProduct("", "", strDateStart, strDateEnd, ref dataGridViewSklad_OstatkiProduct, 2, ref m_lsOstatkiSkladZakazchik, ref m_lsOstatkiSkladProductInfo,"");
                 }
             }
         }
@@ -3367,6 +3485,8 @@ namespace RezkaInfo
                 dataGridView_ObscheeProduct.Rows[0].Selected = false;
         }
 
+       
+
         void dataGridView_ObscheeProduct_Paint(object sender, PaintEventArgs e)
         {
             System.Drawing.Font fnt10Bold = new Font("Times New Roman", 10, FontStyle.Bold);
@@ -3397,7 +3517,7 @@ namespace RezkaInfo
             r3_1.Width = r3_1.Width + r3_2.Width + r3_3.Width - 2;
             r3_1.Height = r3_1.Height / 2;
             e.Graphics.FillRectangle(new SolidBrush(dataGridView_ObscheeProduct.ColumnHeadersDefaultCellStyle.BackColor), r3_1.Left + 1, r3_1.Top + 1, r3_1.Width - 1, r3_1.Height);
-            e.Graphics.DrawString("Принято на с резки", fnt10Bold, new SolidBrush(dataGridView_ObscheeProduct.ColumnHeadersDefaultCellStyle.ForeColor), r3_1, format);
+            e.Graphics.DrawString("Принято с резки", fnt10Bold, new SolidBrush(dataGridView_ObscheeProduct.ColumnHeadersDefaultCellStyle.ForeColor), r3_1, format);
 
             Rectangle r4_1 = dataGridView_ObscheeProduct.GetCellDisplayRectangle(8, -1, true); //get the column header cell
             Rectangle r4_2 = dataGridView_ObscheeProduct.GetCellDisplayRectangle(9, -1, true); //get the column header cell
@@ -3433,7 +3553,6 @@ namespace RezkaInfo
         private void button_ObscheeSearch_Click(object sender, EventArgs e)
         {
             ObscheeButtonSearch();
-
         }
 
         private void ObscheeButtonSearch()
@@ -3450,7 +3569,12 @@ namespace RezkaInfo
                 SelectObscheeZakaz(textBox_ObscheeNumTZ.Text);
 
             for (int i = 0; i < dataGridView_ObscheeZakaz.Rows.Count; i++)
+            {
                 dataGridView_ObscheeZakaz.Rows[i].Selected = false;
+
+                for (int j = 1; j < dataGridView_ObscheeZakaz.Columns.Count;j++)
+                    dataGridView_ObscheeZakaz.Rows[i].Cells[j].ReadOnly = true;
+            }
 
             m_bObscheeSelectZakaz = true;
         }
@@ -3476,7 +3600,7 @@ namespace RezkaInfo
                             string strDate1 = m_MSSQLReader["datezakaz"].ToString().Trim();
                             strDate1 = strDate1.Remove(strDate1.IndexOf(' '));
 
-                            dataGridView_ObscheeZakaz.Rows.Add(i.ToString(),
+                            dataGridView_ObscheeZakaz.Rows.Add(null,i.ToString(),
                                         m_MSSQLReader["zakazchik_name"].ToString().Trim(),
                                         m_MSSQLReader["partiya"].ToString().Trim(),
                                         m_MSSQLReader["product_material"].ToString().Trim() +" " + m_MSSQLReader["product_tols"].ToString().Trim(),
@@ -3484,8 +3608,6 @@ namespace RezkaInfo
                                         m_MSSQLReader["manager_name"].ToString().Trim(),
                                         strDate1
                                         );
-                            
-                            
 
                             m_dicObscheeZakaz.Add(i.ToString() + "-" + m_MSSQLReader["zakazchik_name"].ToString().Trim(), Convert.ToInt32(m_MSSQLReader[0]));
                             i++;
@@ -3507,153 +3629,24 @@ namespace RezkaInfo
 
         private void dataGridView_ObscheeZakaz_SelectionChanged(object sender, EventArgs e)
         {
-            if (m_bObscheeSelectZakaz==true&& dataGridView_ObscheeZakaz.CurrentRow.Index != -1 && dataGridView_ObscheeZakaz.CurrentRow.Selected == true)
+            if (dataGridView_ObscheeZakaz.CurrentRow.Index != -1 && dataGridView_ObscheeZakaz.CurrentRow.Index == ((DataGridView)sender).CurrentRow.Index)
             {
-                int iRowIndex = dataGridView_ObscheeZakaz.CurrentRow.Index;
-                int iZakazID = m_dicObscheeZakaz[dataGridView_ObscheeZakaz[0,iRowIndex].Value.ToString()+"-"+dataGridView_ObscheeZakaz[1,iRowIndex].Value.ToString()];
-                
-                m_dicObscheeProduct.Clear();
-                m_dicObscheeProductInfo.Clear();
-                dataGridView_ObscheeProduct.Rows.Clear();
+                DataGridViewCheckBoxCell ch1 = new DataGridViewCheckBoxCell();
+                ch1 = (DataGridViewCheckBoxCell)dataGridView_ObscheeZakaz.Rows[dataGridView_ObscheeZakaz.CurrentRow.Index].Cells[0];
 
-                stProductInfoObschee prObscheeInfo = new stProductInfoObschee();
-                stProductInfoSmall stRezka = new stProductInfoSmall();
-                stProductInfoSmall stPrinyato = new stProductInfoSmall();
-                stProductInfoSmall stOtgryjeno  =new stProductInfoSmall();
-                stProductInfoSmall stOstatki = new stProductInfoSmall();
-
-                m_strObscheeZakazchik = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazchikZakazchik"].Value.ToString();
-                m_strObscheePartiya = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazchikNumberPartiya"].Value.ToString();
-                m_strObscheeMaterial = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazMaterial"].Value.ToString();
-                m_strObscheeDlinaEtiketki = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazDlinaEtiketki"].Value.ToString();
-                m_strObscheeManager = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazManager"].Value.ToString();
-                m_strObscheeDataPorezki = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells["ObscheeZakazchikNumberDate"].Value.ToString();
-
-
-                string strQuery = "select distinct pr.product_name, pr.id " +
-                                  "from itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_vihidrylon vh " +
-                                  "where vh.product_id=pr.id and zakaz_id=" + iZakazID;
-
-                try
+                if (ch1.Value == null)
+                    ch1.Value = false;
+                switch (ch1.Value.ToString())
                 {
-                    m_MSSQLCommand.CommandText = strQuery;
-                    m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
-
-                    if (m_MSSQLReader.HasRows)
-                    {
-                        while (m_MSSQLReader.Read())
-                            m_dicObscheeProduct.Add(m_MSSQLReader[0].ToString().Trim(), Convert.ToInt32(m_MSSQLReader[1]));
-                    }
-                    m_MSSQLReader.Close();
-
+                    case "True":
+                        ch1.Value = false;
+                        
+                        break;
+                    case "False":
+                        ch1.Value = true;
+                        
+                        break;
                 }
-                catch (System.Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    m_MSSQLReader.Close();
-                }
-
-
-                foreach (KeyValuePair<string, int> key in m_dicObscheeProduct)
-                {
-                    strQuery = "select COUNT(id), ROUND(sum(brytto),2) , ROUND(sum(brytto-vagatary),2), SUM(koletiketki) from itak_etiketka.dbo.itak_vihidrylon where zakaz_id=" + iZakazID + " and product_id=" + key.Value;
-                    SelectInfoObscheeProduct(ref stRezka, strQuery);
-                    
-                    
-                    strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
-                               " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id";
-                    SelectInfoObscheeProduct(ref stPrinyato, strQuery);
-
-                    
-                    strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
-                               " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id and s.rylon_state=2";
-                    SelectInfoObscheeProduct(ref stOtgryjeno, strQuery);
-                    
-
-                    strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
-                               " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
-                                " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id and s.rylon_state=1";
-                    SelectInfoObscheeProduct(ref stOstatki, strQuery);
-                    
-
-                    prObscheeInfo.iProductID = key.Value;
-                    prObscheeInfo.strProductName = key.Key;
-                    prObscheeInfo.stPrSmallRezka = stRezka;
-                    prObscheeInfo.stPrSmallPrinyatoRezka = stPrinyato;
-                    prObscheeInfo.stPrSmallOtgryjeno = stOtgryjeno;
-                    prObscheeInfo.stPrSmallOstatki = stOstatki;
-
-                    m_dicObscheeProductInfo.Add(prObscheeInfo.strProductName, prObscheeInfo);
-                }
-
-                m_iAllCountRylonRezka = m_iAllCountRylonPrinyato = m_iAllCountRylonOtgryjeno =m_iAllCountRylonOstatki =0;
-                m_dAllNettoRezka =  m_dAllNettoPrinyato  =m_dAllNettoOtgryjeno =m_dAllNettoOstatki =0;
-                m_dAllBryttoRezka = m_dAllBryttoPrinyato = m_dAllBryttoOtgryjeno =m_dAllBryttoOstatki =0;
-
-                int i = 1;
-                foreach (KeyValuePair<string, stProductInfoObschee> key in m_dicObscheeProductInfo)
-                {
-                    dataGridView_ObscheeProduct.Rows.Add(i.ToString(),
-                                                        key.Key,
-                                                        key.Value.stPrSmallRezka.iCountRylon.ToString(),
-                                                        key.Value.stPrSmallRezka.dNetto.ToString("0.00"),
-                                                        key.Value.stPrSmallRezka.dBrytto.ToString("0.00"),
-                                                        key.Value.stPrSmallPrinyatoRezka.iCountRylon.ToString(),
-                                                        key.Value.stPrSmallPrinyatoRezka.dNetto.ToString("0.00"),
-                                                        key.Value.stPrSmallPrinyatoRezka.dBrytto.ToString("0.00"),
-                                                        key.Value.stPrSmallOtgryjeno.iCountRylon.ToString(),
-                                                        key.Value.stPrSmallOtgryjeno.dNetto.ToString("0.00"),
-                                                        key.Value.stPrSmallOtgryjeno.dBrytto.ToString("0.00"),
-                                                        key.Value.stPrSmallOstatki.iCountRylon.ToString(),
-                                                        key.Value.stPrSmallOstatki.dNetto.ToString("0.00"),
-                                                        key.Value.stPrSmallOstatki.dBrytto.ToString("0.00")
-                                                        );
-
-                    m_iAllCountRylonRezka += key.Value.stPrSmallRezka.iCountRylon;
-                    m_dAllNettoRezka += key.Value.stPrSmallRezka.dNetto;
-                    m_dAllBryttoRezka += key.Value.stPrSmallRezka.dBrytto;
-
-                    m_iAllCountRylonPrinyato += key.Value.stPrSmallPrinyatoRezka.iCountRylon;
-                    m_dAllNettoPrinyato += key.Value.stPrSmallPrinyatoRezka.dNetto;
-                    m_dAllBryttoPrinyato += key.Value.stPrSmallPrinyatoRezka.dBrytto;
-
-                    m_iAllCountRylonOtgryjeno += key.Value.stPrSmallOtgryjeno.iCountRylon;
-                    m_dAllNettoOtgryjeno += key.Value.stPrSmallOtgryjeno.dNetto;
-                    m_dAllBryttoOtgryjeno += key.Value.stPrSmallOtgryjeno.dBrytto;
-
-                    m_iAllCountRylonOstatki += key.Value.stPrSmallOstatki.iCountRylon;
-                    m_dAllNettoOstatki += key.Value.stPrSmallOstatki.dNetto;
-                    m_dAllBryttoOstatki += key.Value.stPrSmallOstatki.dBrytto;
-
-                    i++;
-                }
-
-                dataGridView_ObscheeProduct.Rows.Add();
-                dataGridView_ObscheeProduct.Rows.Add("",
-                                                    "ОБЩЕЕ",
-                                                        m_iAllCountRylonRezka.ToString(),
-                                                        m_dAllNettoRezka.ToString("0.00"),
-                                                        m_dAllBryttoRezka.ToString("0.00"),
-                                                        m_iAllCountRylonPrinyato.ToString(),
-                                                        m_dAllNettoPrinyato.ToString("0.00"),
-                                                        m_dAllBryttoPrinyato.ToString("0.00"),
-                                                        m_iAllCountRylonOtgryjeno.ToString(),
-                                                        m_dAllNettoOtgryjeno.ToString("0.00"),
-                                                        m_dAllBryttoOtgryjeno.ToString("0.00"),
-                                                        m_iAllCountRylonOstatki.ToString(),
-                                                        m_dAllNettoOstatki.ToString("0.00"),
-                                                        m_dAllBryttoOstatki.ToString("0.00")
-                                                        );
-
-                if (dataGridView_ObscheeProduct.Rows.Count != 0)
-                {
-                    dataGridView_ObscheeProduct.Rows[dataGridView_ObscheeProduct.Rows.Count - 1].DefaultCellStyle.Font = new Font(dataGridView_ObscheeProduct.Font.FontFamily,7, FontStyle.Bold);
-                    dataGridView_ObscheeProduct.Rows[0].Selected = false;
-                }
-
-
             }
         }
 
@@ -3694,5 +3687,415 @@ namespace RezkaInfo
                 ObscheeButtonSearch();
             }
         }
+
+
+        private void ChangeSize()
+        {
+            int iWidth = dataGridView_rezkaZakaz.Size.Width;
+
+            dataGridView_rezkaZakaz.Columns[0].Width = 30;
+            dataGridView_rezkaZakaz.Columns[1].Width = (iWidth - 190) / 2;
+            iWidth = (((iWidth - 30) / 2)+80) / 5;
+            dataGridView_rezkaZakaz.Columns[2].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[3].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[4].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[5].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[6].Width = iWidth;
+
+
+            iWidth = dataGridView_product.Size.Width;
+            dataGridView_product.Columns[0].Width = 30;
+            dataGridView_product.Columns[1].Width = (iWidth - 30) / 2;
+
+            iWidth = ((iWidth - 30) / 2) / 4;
+            dataGridView_product.Columns[2].Width = iWidth;
+            dataGridView_product.Columns[3].Width = iWidth;
+            dataGridView_product.Columns[4].Width = iWidth;
+            dataGridView_product.Columns[5].Width = iWidth;
+
+
+            iWidth = dataGridView_ObscheeZakaz.Size.Width;
+            dataGridView_ObscheeZakaz.Columns[0].Width = 30;
+            dataGridView_ObscheeZakaz.Columns[1].Width = 30;
+
+            dataGridView_ObscheeZakaz.Columns[2].Width = (iWidth - 70) / 3;
+            dataGridView_ObscheeZakaz.Columns[4].Width = (iWidth - 70) / 3;
+
+            dataGridView_ObscheeZakaz.Columns[3].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[5].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[6].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[7].Width = ((iWidth - 70) / 3) / 4;
+
+
+            iWidth = dataGridView_ObscheeProduct.Size.Width;
+            dataGridView_ObscheeProduct.Columns["ObscheeProduct"].Width = (iWidth - 35) / 5;
+
+            iWidth = ((iWidth - 35) / 5) / 3;
+
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaBrytto"].Width = iWidth - 5;
+
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoBrytto"].Width = iWidth - 5;
+
+
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzBrytto"].Width = iWidth - 5;
+
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiBrytto"].Width = iWidth - 5;
+        }
+
+        private void main_form_SizeChanged(object sender, EventArgs e)
+        {
+            //ChangeSize();
+
+           // ChangeColumnSize(ref dataGridViewSklad_AddProduct);
+            //ChangeColumnSize(ref dataGridViewSklad_OtgryzProduct);
+            //ChangeColumnSize(ref dataGridViewSklad_OstatkiProduct);
+        }
+
+        private void dataGridView_rezkaZakaz_SizeChanged(object sender, EventArgs e)
+        {
+            int iWidth = dataGridView_rezkaZakaz.Size.Width;
+
+            dataGridView_rezkaZakaz.Columns[0].Width = 30;
+            dataGridView_rezkaZakaz.Columns[1].Width = (iWidth - 190) / 2;
+            iWidth = (((iWidth - 30) / 2) + 80) / 5;
+            dataGridView_rezkaZakaz.Columns[2].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[3].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[4].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[5].Width = iWidth;
+            dataGridView_rezkaZakaz.Columns[6].Width = iWidth;
+        }
+
+        private void dataGridView_product_SizeChanged(object sender, EventArgs e)
+        {
+            int iWidth = dataGridView_product.Size.Width;
+            dataGridView_product.Columns[0].Width = 30;
+            dataGridView_product.Columns[1].Width = (iWidth - 35) / 2;
+
+            iWidth = ((iWidth - 35) / 2) / 4;
+            dataGridView_product.Columns[2].Width = iWidth;
+            dataGridView_product.Columns[3].Width = iWidth;
+            dataGridView_product.Columns[4].Width = iWidth;
+            dataGridView_product.Columns[5].Width = iWidth;
+        }
+
+        private void dataGridView_ObscheeZakaz_SizeChanged(object sender, EventArgs e)
+        {
+            int iWidth = dataGridView_ObscheeZakaz.Size.Width;
+            dataGridView_ObscheeZakaz.Columns[0].Width = 30;
+            dataGridView_ObscheeZakaz.Columns[1].Width = 30;
+
+            dataGridView_ObscheeZakaz.Columns[2].Width = (iWidth - 70) / 3;
+            dataGridView_ObscheeZakaz.Columns[4].Width = (iWidth - 70) / 3;
+
+            dataGridView_ObscheeZakaz.Columns[3].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[5].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[6].Width = ((iWidth - 70) / 3) / 4;
+            dataGridView_ObscheeZakaz.Columns[7].Width = ((iWidth - 70) / 3) / 4;
+        }
+
+        private void dataGridView_ObscheeProduct_SizeChanged(object sender, EventArgs e)
+        {
+            /*int iWidth = dataGridView_ObscheeProduct.Size.Width;
+           // dataGridView_ObscheeProduct.Columns["ObscheeProduct"].Width = (iWidth - 35) / 5;
+
+            iWidth = ((iWidth - 35) / 5) / 3;
+
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeRezkaBrytto"].Width = iWidth - 5;
+
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheePrinyatoBrytto"].Width = iWidth - 5;
+
+
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeOtgryzBrytto"].Width = iWidth - 5;
+
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiCountRylon"].Width = iWidth + 10;
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiNetto"].Width = iWidth - 5;
+            dataGridView_ObscheeProduct.Columns["ObscheeOstatkiBrytto"].Width = iWidth - 5;*/
+        }
+
+        private void dataGridView_ObscheeZakaz_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+           /* if (e.RowIndex != -1)
+            {
+                DataGridViewCheckBoxCell ch1 = new DataGridViewCheckBoxCell();
+                ch1 = (DataGridViewCheckBoxCell)dataGridView_ObscheeZakaz.Rows[e.RowIndex].Cells[0];
+
+                if (ch1.Value == null)
+                    ch1.Value = false;
+                switch (ch1.Value.ToString())
+                {
+                    case "True":
+                        ch1.Value = false;
+                        m_iCountCheckedZakaz--;
+                        break;
+                    case "False":
+                        ch1.Value = true;
+                        m_iCountCheckedZakaz++;
+                        break;
+                }
+            }*/
+        }
+
+        private void dataGridView_ObscheeZakaz_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            DataGridView data = (DataGridView)sender;
+
+            if (e.RowIndex != -1 && m_iCountCheckedZakaz == 0 && e.RowIndex == data.CurrentRow.Index)
+            {
+                SelectObscheeProduct();
+            }
+        }
+
+        private void SelectObscheeProduct()
+        {
+            if (m_bObscheeSelectZakaz == true && dataGridView_ObscheeZakaz.CurrentRow.Index != -1 )
+            {
+                int iRowIndex = -1;
+                int iZakazID = -1;
+                m_dicObscheeProduct.Clear();
+                m_dicObscheeProductInfo.Clear();
+
+                prObscheeInfo = new stProductInfoObschee();
+                stRezka = new stProductInfoSmall();
+                stPrinyato = new stProductInfoSmall();
+                stOtgryjeno = new stProductInfoSmall();
+                stOstatki = new stProductInfoSmall();
+                dataGridView_ObscheeProduct.Rows.Clear();
+
+                for (int i = 0; i < dataGridView_ObscheeZakaz.Rows.Count; i++)
+                {
+                    DataGridViewCheckBoxCell ch1 = new DataGridViewCheckBoxCell();
+                    ch1 = (DataGridViewCheckBoxCell)dataGridView_ObscheeZakaz.Rows[i].Cells[0];
+                    if (ch1.Value == null)
+                        ch1.Value = false;
+                    switch (ch1.Value.ToString())
+                    {
+                        case "True":
+                            iRowIndex = i;
+                            iZakazID = m_dicObscheeZakaz[dataGridView_ObscheeZakaz[1, iRowIndex].Value.ToString() + "-" + dataGridView_ObscheeZakaz[2, iRowIndex].Value.ToString()];
+                            string strNumber = dataGridView_ObscheeZakaz.Rows[iRowIndex].Cells[1].Value.ToString().Trim();
+
+                            string strQuery = "select distinct pr.product_name, pr.id " +
+                                  "from itak_etiketka.dbo.itak_product pr, itak_etiketka.dbo.itak_vihidrylon vh " +
+                                  "where vh.product_id=pr.id and zakaz_id=" + iZakazID;
+
+                            try
+                            {
+                                m_MSSQLCommand.CommandText = strQuery;
+                                m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
+
+                                if (m_MSSQLReader.HasRows)
+                                {
+                                    while (m_MSSQLReader.Read())
+                                        m_dicObscheeProduct.Add(strNumber + " - " + m_MSSQLReader[0].ToString().Trim(), Convert.ToInt32(m_MSSQLReader[1]));
+                                }
+                                m_MSSQLReader.Close();
+
+                                if (m_dicObscheeProduct.Count != 0)
+                                {
+                                    foreach (KeyValuePair<string, int> key in m_dicObscheeProduct)
+                                    {
+                                        strQuery = "select COUNT(id), ROUND(sum(brytto),2) , ROUND(sum(brytto-vagatary),2), SUM(koletiketki) from itak_etiketka.dbo.itak_vihidrylon where zakaz_id=" + iZakazID + " and product_id=" + key.Value;
+                                        SelectInfoObscheeProduct(ref stRezka, strQuery);
+
+                                        strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
+                                           " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
+                                            " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id";
+                                        SelectInfoObscheeProduct(ref stPrinyato, strQuery);
+
+                                        strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
+                                           " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
+                                            " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id and s.rylon_state=2";
+                                        SelectInfoObscheeProduct(ref stOtgryjeno, strQuery);
+
+                                        strQuery = "select COUNT(vh.id), ROUND(sum(vh.brytto),2) , ROUND(sum(vh.brytto-vh.vagatary),2), SUM(vh.koletiketki) " +
+                                           " from itak_etiketka.dbo.itak_vihidrylon vh, itak_etiketka.dbo.itak_sklad s " +
+                                            " where vh.zakaz_id=" + iZakazID + " and vh.product_id=" + key.Value + " and s.rylon_id=vh.id and s.rylon_state=1";
+                                        SelectInfoObscheeProduct(ref stOstatki, strQuery);
+
+                                        prObscheeInfo.iProductID = key.Value;
+                                        prObscheeInfo.strProductName = key.Key;
+                                        prObscheeInfo.stPrSmallRezka = stRezka;
+                                        prObscheeInfo.stPrSmallPrinyatoRezka = stPrinyato;
+                                        prObscheeInfo.stPrSmallOtgryjeno = stOtgryjeno;
+                                        prObscheeInfo.stPrSmallOstatki = stOstatki;
+
+                                        m_dicObscheeProductInfo.Add(prObscheeInfo.strProductName, prObscheeInfo);
+                                    }
+
+                                    m_dicObscheeProduct.Clear();
+                                }
+                            }
+                            catch (System.Exception ex)
+                            {
+                                MessageBox.Show(ex.Message);
+                                m_MSSQLReader.Close();
+                            }
+
+                            break;
+                        case "False":
+                            //MessageBox.Show("False");
+                            break;
+                    }
+                }
+            }
+
+            m_iAllCountRylonRezka = m_iAllCountRylonPrinyato = m_iAllCountRylonOtgryjeno = m_iAllCountRylonOstatki = 0;
+            m_dAllNettoRezka = m_dAllNettoPrinyato = m_dAllNettoOtgryjeno = m_dAllNettoOstatki = 0;
+            m_dAllBryttoRezka = m_dAllBryttoPrinyato = m_dAllBryttoOtgryjeno = m_dAllBryttoOstatki = 0;
+
+             int iCounter = 1;
+            foreach (KeyValuePair<string, stProductInfoObschee> key in m_dicObscheeProductInfo)
+            {
+                dataGridView_ObscheeProduct.Rows.Add(iCounter.ToString(),
+                                                    key.Key.Substring(key.Key.IndexOf('-')+1),
+                                                    key.Value.stPrSmallRezka.iCountRylon.ToString(),
+                                                    key.Value.stPrSmallRezka.dNetto.ToString("0.00"),
+                                                    key.Value.stPrSmallRezka.dBrytto.ToString("0.00"),
+                                                    key.Value.stPrSmallPrinyatoRezka.iCountRylon.ToString(),
+                                                    key.Value.stPrSmallPrinyatoRezka.dNetto.ToString("0.00"),
+                                                    key.Value.stPrSmallPrinyatoRezka.dBrytto.ToString("0.00"),
+                                                    key.Value.stPrSmallOtgryjeno.iCountRylon.ToString(),
+                                                    key.Value.stPrSmallOtgryjeno.dNetto.ToString("0.00"),
+                                                    key.Value.stPrSmallOtgryjeno.dBrytto.ToString("0.00"),
+                                                    key.Value.stPrSmallOstatki.iCountRylon.ToString(),
+                                                    key.Value.stPrSmallOstatki.dNetto.ToString("0.00"),
+                                                    key.Value.stPrSmallOstatki.dBrytto.ToString("0.00")
+                                                    );
+
+                m_iAllCountRylonRezka += key.Value.stPrSmallRezka.iCountRylon;
+                m_dAllNettoRezka += key.Value.stPrSmallRezka.dNetto;
+                m_dAllBryttoRezka += key.Value.stPrSmallRezka.dBrytto;
+
+                m_iAllCountRylonPrinyato += key.Value.stPrSmallPrinyatoRezka.iCountRylon;
+                m_dAllNettoPrinyato += key.Value.stPrSmallPrinyatoRezka.dNetto;
+                m_dAllBryttoPrinyato += key.Value.stPrSmallPrinyatoRezka.dBrytto;
+
+                m_iAllCountRylonOtgryjeno += key.Value.stPrSmallOtgryjeno.iCountRylon;
+                m_dAllNettoOtgryjeno += key.Value.stPrSmallOtgryjeno.dNetto;
+                m_dAllBryttoOtgryjeno += key.Value.stPrSmallOtgryjeno.dBrytto;
+
+                m_iAllCountRylonOstatki += key.Value.stPrSmallOstatki.iCountRylon;
+                m_dAllNettoOstatki += key.Value.stPrSmallOstatki.dNetto;
+                m_dAllBryttoOstatki += key.Value.stPrSmallOstatki.dBrytto;
+
+                iCounter++;
+            }
+
+            if (m_dicObscheeProductInfo.Count != 0)
+            {
+                dataGridView_ObscheeProduct.Rows.Add();
+                dataGridView_ObscheeProduct.Rows.Add("",
+                                                    "ОБЩЕЕ",
+                                                        m_iAllCountRylonRezka.ToString(),
+                                                        m_dAllNettoRezka.ToString("0.00"),
+                                                        m_dAllBryttoRezka.ToString("0.00"),
+                                                        m_iAllCountRylonPrinyato.ToString(),
+                                                        m_dAllNettoPrinyato.ToString("0.00"),
+                                                        m_dAllBryttoPrinyato.ToString("0.00"),
+                                                        m_iAllCountRylonOtgryjeno.ToString(),
+                                                        m_dAllNettoOtgryjeno.ToString("0.00"),
+                                                        m_dAllBryttoOtgryjeno.ToString("0.00"),
+                                                        m_iAllCountRylonOstatki.ToString(),
+                                                        m_dAllNettoOstatki.ToString("0.00"),
+                                                        m_dAllBryttoOstatki.ToString("0.00")
+                                                        );
+
+                if (dataGridView_ObscheeProduct.Rows.Count != 0)
+                {
+                    dataGridView_ObscheeProduct.Rows[dataGridView_ObscheeProduct.Rows.Count - 1].DefaultCellStyle.Font = new Font(dataGridView_ObscheeProduct.Font.FontFamily, 7, FontStyle.Bold);
+                    dataGridView_ObscheeProduct.Rows[0].Selected = false;
+                }
+            }
+            
+        }
+
+        private void dataGridViewSklad_AddProduct_SizeChanged(object sender, EventArgs e)
+        {
+            DataGridView data = (DataGridView)sender;
+            int iWidth = data.ClientSize.Width;
+
+            //int iWidth = data.Size.Width;
+            iWidth -= 40;
+            for (int i = 0; i < 9; i++)
+            {
+                if (cColumns[2].Visible == true)
+                {
+                    if (i == 0) cColumns[i].Width = 40;
+                    else if (i >= 1 && i < 3) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 2) - 13;
+                    else if (i >= 3) cColumns[i].Width = (iWidth - (iWidth / 2)) / 6;
+                }
+                 else if (cColumns[2].Visible == false)
+                 {
+                     if (i == 0) cColumns[i].Width = 40;
+                     else if (i == 1) cColumns[i].Width = ((iWidth - (iWidth / 2)));
+                     else if (i >= 2) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 4) - 8;
+                 }
+            }
+        }
+
+        private void dataGridViewSklad_OtgryzProduct_SizeChanged(object sender, EventArgs e)
+        {
+            DataGridView data = (DataGridView)sender;
+            int iWidth = data.ClientSize.Width;
+
+            //int iWidth = data.Size.Width;
+            iWidth -= 40;
+            for (int i = 0; i < 9; i++)
+            {
+                if (cColumns[2].Visible == true)
+                {
+                    if (i == 0) cColumns[i].Width = 40;
+                    else if (i >= 1 && i < 3) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 2) - 13;
+                    else if (i >= 3) cColumns[i].Width = (iWidth - (iWidth / 2)) / 6;
+                }
+                else if (cColumns[2].Visible == false)
+                {
+                    if (i == 0) cColumns[i].Width = 40;
+                    else if (i == 1) cColumns[i].Width = ((iWidth - (iWidth / 2)));
+                    else if (i >= 2) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 4) - 8;
+                }
+            }
+        }
+
+        private void dataGridViewSklad_OstatkiProduct_SizeChanged(object sender, EventArgs e)
+        {
+            DataGridView data = (DataGridView)sender;
+            int iWidth = data.ClientSize.Width;
+
+            //int iWidth = data.Size.Width;
+            iWidth -= 40;
+            for (int i = 0; i < 9; i++)
+            {
+                if (cColumns[2].Visible == true)
+                {
+                    if (i == 0) cColumns[i].Width = 40;
+                    else if (i >= 1 && i < 3) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 2) - 13;
+                    else if (i >= 3) cColumns[i].Width = (iWidth - (iWidth / 2)) / 6;
+                }
+                else if (cColumns[2].Visible == false)
+                {
+                    if (i == 0) cColumns[i].Width = 40;
+                    else if (i == 1) cColumns[i].Width = ((iWidth - (iWidth / 2)));
+                    else if (i >= 2) cColumns[i].Width = ((iWidth - (iWidth / 2)) / 4) - 8;
+                }
+            }
+        }
+
+
+
     }
 }
