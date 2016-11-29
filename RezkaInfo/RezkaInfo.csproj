@@ -83,6 +83,7 @@
     <Compile Include="delChange_form.Designer.cs">
       <DependentUpon>delChange_form.cs</DependentUpon>
     </Compile>
+    <Compile Include="Helper.cs" />
     <Compile Include="main_form.cs">
       <SubType>Form</SubType>
     </Compile>
