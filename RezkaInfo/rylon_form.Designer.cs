@@ -35,18 +35,19 @@
             this.button_ok = new System.Windows.Forms.Button();
             this.button_cancel = new System.Windows.Forms.Button();
             this.dataGridView_rylon = new System.Windows.Forms.DataGridView();
-            this.Num_rylon = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Brytto = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Netto = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Dlina = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CountEtik = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Check_men = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Check_Time = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Check_rylon = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.checkBox_selectAll = new System.Windows.Forms.CheckBox();
             this.button_print = new System.Windows.Forms.Button();
             this.button_all_label = new System.Windows.Forms.Button();
             this.checkbox_logo = new System.Windows.Forms.CheckBox();
+            this.Num_rylon = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Brytto = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Netto = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Dlina = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Square = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CountEtik = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Check_men = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Check_Time = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Check_rylon = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_rylon)).BeginInit();
             this.SuspendLayout();
             // 
@@ -92,6 +93,7 @@
             this.Brytto,
             this.Netto,
             this.Dlina,
+            this.Square,
             this.CountEtik,
             this.Check_men,
             this.Check_Time,
@@ -120,62 +122,11 @@
             dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             this.dataGridView_rylon.RowsDefaultCellStyle = dataGridViewCellStyle4;
             this.dataGridView_rylon.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dataGridView_rylon.Size = new System.Drawing.Size(903, 384);
+            this.dataGridView_rylon.Size = new System.Drawing.Size(996, 384);
             this.dataGridView_rylon.TabIndex = 3;
-            this.dataGridView_rylon.DoubleClick += new System.EventHandler(this.dataGridView_rylon_DoubleClick);
-            this.dataGridView_rylon.CurrentCellDirtyStateChanged += new System.EventHandler(this.dataGridView_rylon_CurrentCellDirtyStateChanged);
             this.dataGridView_rylon.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView_rylon_CellContentClick);
-            // 
-            // Num_rylon
-            // 
-            this.Num_rylon.HeaderText = "№ рулона";
-            this.Num_rylon.Name = "Num_rylon";
-            this.Num_rylon.ReadOnly = true;
-            // 
-            // Brytto
-            // 
-            this.Brytto.HeaderText = "Брутто, кг";
-            this.Brytto.Name = "Brytto";
-            this.Brytto.ReadOnly = true;
-            // 
-            // Netto
-            // 
-            this.Netto.HeaderText = "Нетто, кг";
-            this.Netto.Name = "Netto";
-            this.Netto.ReadOnly = true;
-            // 
-            // Dlina
-            // 
-            this.Dlina.HeaderText = "Длина м.п.";
-            this.Dlina.Name = "Dlina";
-            this.Dlina.ReadOnly = true;
-            this.Dlina.Width = 110;
-            // 
-            // CountEtik
-            // 
-            this.CountEtik.HeaderText = "К-во етикеток";
-            this.CountEtik.Name = "CountEtik";
-            this.CountEtik.ReadOnly = true;
-            this.CountEtik.Width = 130;
-            // 
-            // Check_men
-            // 
-            this.Check_men.HeaderText = "№ провер.";
-            this.Check_men.Name = "Check_men";
-            this.Check_men.Width = 110;
-            // 
-            // Check_Time
-            // 
-            this.Check_Time.HeaderText = "Дата проверки";
-            this.Check_Time.Name = "Check_Time";
-            this.Check_Time.Width = 135;
-            // 
-            // Check_rylon
-            // 
-            this.Check_rylon.HeaderText = "Проверка";
-            this.Check_rylon.Name = "Check_rylon";
-            this.Check_rylon.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.Check_rylon.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            this.dataGridView_rylon.CurrentCellDirtyStateChanged += new System.EventHandler(this.dataGridView_rylon_CurrentCellDirtyStateChanged);
+            this.dataGridView_rylon.DoubleClick += new System.EventHandler(this.dataGridView_rylon_DoubleClick);
             // 
             // checkBox_selectAll
             // 
@@ -229,11 +180,67 @@
             this.checkbox_logo.UseVisualStyleBackColor = true;
             this.checkbox_logo.Visible = false;
             // 
+            // Num_rylon
+            // 
+            this.Num_rylon.HeaderText = "№ рулона";
+            this.Num_rylon.Name = "Num_rylon";
+            this.Num_rylon.ReadOnly = true;
+            // 
+            // Brytto
+            // 
+            this.Brytto.HeaderText = "Брутто, кг";
+            this.Brytto.Name = "Brytto";
+            this.Brytto.ReadOnly = true;
+            // 
+            // Netto
+            // 
+            this.Netto.HeaderText = "Нетто, кг";
+            this.Netto.Name = "Netto";
+            this.Netto.ReadOnly = true;
+            // 
+            // Dlina
+            // 
+            this.Dlina.HeaderText = "Длина м.п.";
+            this.Dlina.Name = "Dlina";
+            this.Dlina.ReadOnly = true;
+            this.Dlina.Width = 110;
+            // 
+            // Square
+            // 
+            this.Square.HeaderText = "К-во м.кв.";
+            this.Square.Name = "Square";
+            // 
+            // CountEtik
+            // 
+            this.CountEtik.HeaderText = "К-во етикеток";
+            this.CountEtik.Name = "CountEtik";
+            this.CountEtik.ReadOnly = true;
+            this.CountEtik.Width = 130;
+            // 
+            // Check_men
+            // 
+            this.Check_men.HeaderText = "№ провер.";
+            this.Check_men.Name = "Check_men";
+            this.Check_men.Width = 110;
+            // 
+            // Check_Time
+            // 
+            this.Check_Time.HeaderText = "Дата проверки";
+            this.Check_Time.Name = "Check_Time";
+            this.Check_Time.Width = 135;
+            // 
+            // Check_rylon
+            // 
+            this.Check_rylon.HeaderText = "Проверка";
+            this.Check_rylon.Name = "Check_rylon";
+            this.Check_rylon.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.Check_rylon.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            // 
             // rylon_form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(927, 476);
+            this.ClientSize = new System.Drawing.Size(1020, 476);
             this.ControlBox = false;
             this.Controls.Add(this.checkbox_logo);
             this.Controls.Add(this.button_all_label);
@@ -259,16 +266,17 @@
         private System.Windows.Forms.Button button_cancel;
         private System.Windows.Forms.DataGridView dataGridView_rylon;
         private System.Windows.Forms.CheckBox checkBox_selectAll;
+        private System.Windows.Forms.Button button_print;
+        private System.Windows.Forms.Button button_all_label;
+        private System.Windows.Forms.CheckBox checkbox_logo;
         private System.Windows.Forms.DataGridViewTextBoxColumn Num_rylon;
         private System.Windows.Forms.DataGridViewTextBoxColumn Brytto;
         private System.Windows.Forms.DataGridViewTextBoxColumn Netto;
         private System.Windows.Forms.DataGridViewTextBoxColumn Dlina;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Square;
         private System.Windows.Forms.DataGridViewTextBoxColumn CountEtik;
         private System.Windows.Forms.DataGridViewTextBoxColumn Check_men;
         private System.Windows.Forms.DataGridViewTextBoxColumn Check_Time;
         private System.Windows.Forms.DataGridViewCheckBoxColumn Check_rylon;
-        private System.Windows.Forms.Button button_print;
-        private System.Windows.Forms.Button button_all_label;
-        private System.Windows.Forms.CheckBox checkbox_logo;
     }
 }

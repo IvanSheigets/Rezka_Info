@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using System.Data.SqlClient;
 using System.IO;
 using System.Drawing.Printing;
-using System.Drawing.Drawing2D;
 using PrintEtiketkaMy;
 using Microsoft.Win32;
 
@@ -45,8 +40,8 @@ namespace RezkaInfo
         SqlDataReader m_MSSQLReader;
         ///////////////////////////
 
-        Dictionary<string, int> m_dicRylon;
-        Dictionary<int, int> m_dicRylonChecked;
+        Dictionary<string, UInt64> m_dicRylon;
+        Dictionary<UInt64, int> m_dicRylonChecked;
         Dictionary<int, int> m_dicRylonColorCheck;
         
 
@@ -113,36 +108,12 @@ namespace RezkaInfo
                 }
                 catch (System.Exception ex)
                 {
-                    WriteLog("Ошибка подключения к бд", ex);
+                    Helper.WriteLog("Ошибка подключения к бд", ex);
                     return false;
                 }
             }
             else
                 return true;
-        }
-
-        private void WriteLog(string err, System.Exception ex)
-        {
-            ///////log file
-            string strError = "";
-            String current_time_str;
-            StreamWriter logFile = null;
-            ///////////////////////////
-
-            try
-            {
-                FileInfo fi = new FileInfo("log.txt");
-                logFile = fi.AppendText();
-                current_time_str = DateTime.Now.ToString("[dd.MM:yyyy - HH:mm:ss]");
-                strError = current_time_str + "- " + err + "- " + ex.Message;
-                logFile.WriteLine(strError);
-                logFile.Close();
-            }
-            catch (System.Exception ex1)
-            {
-                string s = ex1.Message;
-                logFile.Close();
-            }
         }
 
         private void button_ok_Click(object sender, EventArgs e)
@@ -192,11 +163,9 @@ namespace RezkaInfo
 
         private void rylon_form_Load(object sender, EventArgs e)
         {
-            m_dicRylon = new Dictionary<string, int>();
-            m_dicRylonChecked = new Dictionary<int,int>();
+            m_dicRylon = new Dictionary<string, UInt64>();
+            m_dicRylonChecked = new Dictionary<UInt64, int>();
             m_dicRylonColorCheck = new Dictionary<int, int>();
-
-
 
             if (CheckConnect() == true)
             {
@@ -220,7 +189,9 @@ namespace RezkaInfo
         {
             if (CheckConnect())
             {
-                strMSSQLQuery = "select brytto, brytto-vagatary, dlinarylona, koletiketki, num_rylon, state_rylon, id, check_men, check_time  from itak_etiketka.dbo.itak_vihidrylon where zakaz_id=" + m_iZakazID.ToString() + " and product_id=" + m_iProductID + " and width=" + m_iWidth.ToString() + " order by num_rylon ASC";
+                strMSSQLQuery = "select brytto, brytto-vagatary, dlinarylona, koletiketki, num_rylon, state_rylon, id, check_men, check_time  from itak_etiketka.dbo.itak_vihidrylon where zakaz_id=" + 
+                    m_iZakazID.ToString() + " and product_id=" + m_iProductID + " and width=" + m_iWidth.ToString() + 
+                    " order by num_rylon ASC";
                 m_MSSQLCommand.CommandText = strMSSQLQuery;
                 m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
 
@@ -235,6 +206,15 @@ namespace RezkaInfo
                 int iCountUnCheck = 0;
                 int iCheckMen = -1;
 
+                UInt64 id = 0;
+                int iNumRylon = 0;
+                double dBrutto = 0;
+                double dNetto = 0;
+                double dSquare = 0;
+                int iDlinaRylona = 0;
+                int iKolEtiketki = 0;
+
+
                 string strCheckTime = "";
 
                 int i = 0;
@@ -242,11 +222,21 @@ namespace RezkaInfo
                 {
                     try
                     {
-                        dataGridView_rylon.Rows.Add(m_MSSQLReader["num_rylon"].ToString().Trim(),
-                                                    m_MSSQLReader["brytto"].ToString().Trim(),
-                                                    m_MSSQLReader[1].ToString().Trim(),
-                                                    m_MSSQLReader["dlinarylona"].ToString().Trim(),
-                                                    m_MSSQLReader["koletiketki"].ToString().Trim());
+                        id = Convert.ToUInt64(m_MSSQLReader["id"]);
+                        iNumRylon = Convert.ToInt32(m_MSSQLReader["num_rylon"]);
+                        dBrutto = Convert.ToDouble(m_MSSQLReader["brytto"]);
+                        dNetto = Convert.ToDouble(m_MSSQLReader[1]);
+                        iDlinaRylona = Convert.ToInt32(m_MSSQLReader["dlinarylona"]);
+                        dSquare = (iDlinaRylona * m_iWidth) / 1000.0;
+                        iKolEtiketki = Convert.ToInt32(m_MSSQLReader["koletiketki"]);
+
+                        dataGridView_rylon.Rows.Add(iNumRylon.ToString(),
+                                                    dBrutto.ToString("0.0"),
+                                                    dNetto.ToString("0.0"),
+                                                    iDlinaRylona,
+                                                    dSquare.ToString("0.0"),
+                                                    iKolEtiketki
+                                                    );
 
                         iCheckMen = Convert.ToInt32(m_MSSQLReader["check_men"].ToString().Trim());
 
@@ -301,14 +291,14 @@ namespace RezkaInfo
 
                         i++;
 
-                        strKey = m_MSSQLReader["num_rylon"].ToString().Trim()+" - "
-                            + m_MSSQLReader["brytto"].ToString().Trim()+" - "
-                            + m_MSSQLReader[1].ToString().Trim() + " - "
-                            + m_MSSQLReader["dlinarylona"].ToString().Trim()+" - "
-                            + m_MSSQLReader["koletiketki"].ToString().Trim();
+                        strKey = iNumRylon.ToString() + " - "
+                            + dBrutto.ToString("0.0") + " - "
+                            + dNetto.ToString("0.0") + " - "
+                            + iDlinaRylona.ToString() + " - "
+                            + iKolEtiketki.ToString();
 
-                        m_dicRylon.Add(strKey, Convert.ToInt32(m_MSSQLReader["id"].ToString().Trim()));
-                        m_dicRylonChecked.Add(Convert.ToInt32(m_MSSQLReader["id"].ToString().Trim()), iCheckRylon);
+                        m_dicRylon.Add(strKey, id);
+                        m_dicRylonChecked.Add(id, iCheckRylon);
 
                         if (dataGridView_rylon.Rows.Count!=0)
                             dataGridView_rylon.Rows[0].Selected = false;
@@ -325,28 +315,6 @@ namespace RezkaInfo
                 if (i == iCountCheck)
                     checkBox_selectAll.Checked = true;
                 else checkBox_selectAll.Checked = false;
-
-
-               /* for (i=0;i<m_dicRylonColorCheck.Count;i++)
-                {
-                    if (m_dicRylonColorCheck[i] == 0)
-                    {
-                        dataGridView_rylon.Rows[i].Cells["Check_rylon"].Value = false;
-                        dataGridView_rylon.Rows[i].DefaultCellStyle.BackColor = Color.Red;
-                    }
-                    else if (m_dicRylonColorCheck[i] == 1)
-                    {
-                        dataGridView_rylon.Rows[i].DefaultCellStyle.BackColor = Color.LightGreen;
-                        dataGridView_rylon.Rows[i].Cells["Check_rylon"].Value = true;
-                    }
-                    else if (m_dicRylonColorCheck[i] == 2)
-                    {
-                        dataGridView_rylon.Rows[i].Cells["Check_rylon"].Value = false;
-                        dataGridView_rylon.Rows[i].DefaultCellStyle.BackColor = Color.Brown;
-                    }
-
-                }*/
-
             }
         }
 
@@ -428,11 +396,11 @@ namespace RezkaInfo
                     dataGridView_rylon.Rows[e.RowIndex].Cells["Check_Time"].Value = strCheckTime;
                     dataGridView_rylon.Rows[e.RowIndex].Cells["Check_men"].Value = m_iCheckMen.ToString();
 
-                    string strKey = dataGridView_rylon.Rows[e.RowIndex].Cells[0].Value.ToString() + " - "
-                        + dataGridView_rylon.Rows[e.RowIndex].Cells[1].Value.ToString() + " - "
-                        + dataGridView_rylon.Rows[e.RowIndex].Cells[2].Value.ToString() + " - "
-                        + dataGridView_rylon.Rows[e.RowIndex].Cells[3].Value.ToString() + " - "
-                        + dataGridView_rylon.Rows[e.RowIndex].Cells[4].Value.ToString();
+                    string strKey = dataGridView_rylon.Rows[e.RowIndex].Cells["num_rylon"].Value.ToString() + " - "
+                        + dataGridView_rylon.Rows[e.RowIndex].Cells["brytto"].Value.ToString() + " - "
+                        + dataGridView_rylon.Rows[e.RowIndex].Cells["netto"].Value.ToString() + " - "
+                        + dataGridView_rylon.Rows[e.RowIndex].Cells["dlina"].Value.ToString() + " - "
+                        + dataGridView_rylon.Rows[e.RowIndex].Cells["countEtik"].Value.ToString();
 
 
                     if (CheckConnect())

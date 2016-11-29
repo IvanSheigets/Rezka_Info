@@ -79,11 +79,13 @@ namespace RezkaInfo
 
         double m_dNetto = 0;
         double m_dBrytto = 0;
+        double m_dSquare = 0;
         int m_iCountRylon = 0;
         int m_iKolEtiketki = 0;
         int m_iDlinaRylona = 0;
         string m_strMaterial = "";
         string m_strDlinaEtiketki = "";
+        int m_iWidth = 0;
 
         int m_iZakazID = -1;
         int m_iProductID = -1;
@@ -1244,6 +1246,7 @@ namespace RezkaInfo
             int iCountDelRylon = 0;
             int iKolEtiketki = 0;
             int iDlinaRylona = 0;
+            double dSquare = 0;
 
             
             for (i=0;i<dataGridView_rezkaZakaz.Rows.Count;i++)
@@ -1293,6 +1296,7 @@ namespace RezkaInfo
 
             m_dNetto = 0;
             m_dBrytto = 0;
+            m_dSquare = 0;
             m_iCountRylon = 0;
             m_iKolEtiketki = 0;
             m_iDlinaRylona = 0;
@@ -1308,6 +1312,7 @@ namespace RezkaInfo
                 iCountRylon += m_iCountRylon;
                 iKolEtiketki += m_iKolEtiketki;
                 iDlinaRylona += m_iDlinaRylona;
+                dSquare += m_dSquare;
             }
 
             label_brytto.Text = dBrytto.ToString("0.00") + " кг";
@@ -1315,8 +1320,9 @@ namespace RezkaInfo
             label_countRylon.Text = iCountRylon.ToString() + " шт";
             label_koletiket.Text = iKolEtiketki.ToString() + " шт";
             label_mp.Text = iDlinaRylona.ToString() + " м";
+            label_square.Text = dSquare.ToString("0.0") + " м.кв";
             //label_Material.Text = m_strMaterial;
-              
+
         }
 
 
@@ -1625,6 +1631,21 @@ namespace RezkaInfo
             m_MSSQLReader.Close();
         }
 
+        private void GetProductWidth(int iZakazID, int iProductID)
+        {
+            strMSSQLQuery = "select width from itak_etiketka.dbo.itak_vihidrylon where (state_rylon=1 or state_rylon=0) and zakaz_id=" 
+                + iZakazID.ToString() + " and product_id=" + iProductID.ToString();
+            m_MSSQLCommand.CommandText = strMSSQLQuery;
+            m_MSSQLReader = m_MSSQLCommand.ExecuteReader();
+            m_MSSQLReader.Read();
+            if (m_MSSQLReader.HasRows)
+            {
+                m_iWidth = Convert.ToInt32(m_MSSQLReader["width"]);
+            }
+            m_MSSQLReader.Close();
+
+        }
+
         private void RefreshBut()
         {
             int iSelectedZakaz = -1;
@@ -1718,12 +1739,14 @@ namespace RezkaInfo
                     m_iCountRylon = 0;
                     m_iKolEtiketki = 0;
                     m_iDlinaRylona = 0;
+                    m_iWidth = 0;
 
-                    //string strKey = listBox1.Items[listBox1.SelectedIndex].ToString();
                     string strKey = dataGridView_product.Rows[iSelectProduct].Cells["Product"].Value.ToString() +"-"+ dataGridView_product.Rows[iSelectProduct].Cells["Width"].Value.ToString(); ;
 
-
                     SelectProductInfo(m_dicZakaz[strListInfo], m_dicProduct[strKey]);
+                    GetProductWidth(m_dicZakaz[strListInfo], m_dicProduct[strKey]);
+
+                    m_dSquare = (m_iDlinaRylona * m_iWidth) / 1000.0;
 
                     label_brytto.Text = m_dBrytto.ToString("0.00") + " кг";
                     label_netto.Text = m_dNetto.ToString("0.00") + " кг";
@@ -1733,6 +1756,7 @@ namespace RezkaInfo
                     label_Material.Text = m_strMaterial;
                     label_rezkaManagerValue.Text = m_strRezkaManager;
                     label_DlinaEtiketkiValue.Text = m_strDlinaEtiketki+" мм";
+                    label_square.Text = m_dSquare.ToString("0.0") + " м.кв";
 
                 }
             }
@@ -1820,7 +1844,6 @@ namespace RezkaInfo
         private void dataGridView_product_MouseClick(object sender, MouseEventArgs e)
         {
             DataGridProductClick();
-          
         }
 
         private void button_changeCheckMen_Click(object sender, EventArgs e)
@@ -2564,14 +2587,11 @@ namespace RezkaInfo
                     if (e.RowIndex != -1)
                     {
                         int iListCurSel = e.RowIndex;
-                        string strKey = dataGridView_product.Rows[iListCurSel].Cells["Product"].Value.ToString() + "-" + dataGridView_product.Rows[iListCurSel].Cells["Width"].Value.ToString();
+                        string strKey = dataGridView_product.Rows[iListCurSel].Cells["Product"].Value.ToString() +
+                            "-" + dataGridView_product.Rows[iListCurSel].Cells["Width"].Value.ToString();
                         m_iProductID = m_dicProduct[strKey];
-                        //MessageBox.Show("zakaz - " + m_iZakazID.ToString() + " - product - " + m_iProductID);
-                        int iWidth = 0;
                         
-                        iWidth = Convert.ToInt32(dataGridView_product.Rows[e.RowIndex].Cells[2].Value);
-                        
-                        change_Product_rezka changeProductForm = new change_Product_rezka(m_iZakazID,m_iProductID,iWidth);
+                        change_Product_rezka changeProductForm = new change_Product_rezka(m_iZakazID, m_iProductID, m_iWidth);
                         changeProductForm.m_MSSQLConnection = m_MSSQLConnection;
 
                         changeProductForm.ShowDialog();
@@ -2584,6 +2604,8 @@ namespace RezkaInfo
 
         private void dataGridView1_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
+            label_square.Text = "0,0 м.кв";
+
             if (dataGridView_rezkaZakaz.Rows.Count != -1 && e.RowIndex != -1 && button_rezkaPrintZakaz.Enabled == false)
                 button_rezkaPrintZakaz.Enabled = true;
 
